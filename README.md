@@ -7,14 +7,12 @@ A lightweight personal AI assistant framework with multi-channel support, tool u
 
 ## Features
 
-- **Multi-provider LLM** — Anthropic, OpenAI, Gemini, DeepSeek, Groq, OpenRouter, DashScope, Moonshot, vLLM, and more via [LiteLLM](https://github.com/BerriAI/litellm)
-- **Multi-channel chat** — Telegram, WhatsApp, Discord, Feishu/Lark
-- **Rich tool system** — File I/O, shell execution, web search/fetch, messaging, subagents, cron scheduling
-- **PaperBanana diagrams** — Generate publication-quality academic illustrations and statistical plots via Gemini or Replicate
-- **Skills** — Extensible markdown-based skill system (diagram-gen, GitHub, cron, summarize, weather, …)
-- **Memory** — Persistent long-term memory and daily notes
-- **Cron & Heartbeat** — Schedule recurring tasks; periodic self-checks
-- **Subagents** — Spawn background agents for long-running tasks
+- [x] **Diagram Generation** — Create publication-quality academic illustrations and statistical plots from paper sections
+- [ ] **Paper Discovery** — Proactively search and summarize trending AI papers on a schedule
+- [ ] **Video Explainers** — Generate walkthrough videos from paper content
+- [ ] **Paper Websites** — Turn papers into interactive web pages
+- [ ] **Poster Generation** — Produce conference-ready posters from papers
+- [ ] **Code Synthesis** — Extract and generate reproducible code from paper methodologies
 
 ## Quick Start
 

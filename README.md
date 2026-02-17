@@ -1,9 +1,11 @@
 # 🐈 ClawPhD
 
-A lightweight personal AI assistant framework with multi-channel support, tool use, and academic diagram generation.
+An OpenClaw Agent for research that can turn academic papers into publication-ready diagrams, posters, videos, and more. This project is based on the nano version of OpenClaw: [Nanobot](https://github.com/HKUDS/nanobot).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
+[中文文档](README_CN.md)
 
 ## Features
 

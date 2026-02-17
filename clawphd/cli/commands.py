@@ -335,7 +335,7 @@ def _build_diagram_providers(config):
 
     # Reference store (optional – look in the repo's paperbanana/data/)
     for candidate in [
-        Path(__file__).resolve().parent.parent.parent / "paperbanana" / "data",
+        Path(__file__).resolve().parent.parent.parent / "data",
         Path.home() / ".clawphd" / "references",
     ]:
         if (candidate / "index.json").exists():

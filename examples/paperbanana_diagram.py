@@ -100,7 +100,7 @@ def _build_providers(backend: str = "gemini", vlm_backend: str | None = None):
 
     # ── Reference store (optional) ─────────────────────────────────────────
     reference_store = None
-    ref_path = Path(__file__).resolve().parent.parent / "paperbanana" / "data" / "reference_sets"
+    ref_path = Path(__file__).resolve().parent.parent / "data" / "reference_sets"
     if (ref_path / "index.json").exists():
         reference_store = ReferenceStore(ref_path)
         print(f"  Reference store: {reference_store.count} examples")
@@ -159,27 +159,27 @@ DIAGRAM_PROMPT = """\
 Generate a methodology diagram for the following paper section.  please read the diagram-gen skill first for better diagram
 
 ## Methodology
-Our framework, PaperBanana, automates the generation of publication-quality
-academic illustrations through a multi-agent pipeline. The system takes as
-input a methodology section (S) and a figure caption (C).
+    Our framework, PaperBanana, automates the generation of publication-quality
+    academic illustrations through a multi-agent pipeline. The system takes as input
+    a methodology section (S) and a figure caption (C).
 
-Phase 1 – Linear Planning:
-1. The Retriever agent selects the top-10 most relevant reference examples
-   from a curated set of high-quality diagrams.
-2. The Planner agent uses in-context learning from these examples to
-   generate a detailed textual description (P) of the target diagram.
-3. The Stylist agent refines the description to optimise visual aesthetics (P*).
+    Phase 1 - Linear Planning:
+    1. The Retriever agent selects the top-10 most relevant reference examples from
+       a curated set of high-quality diagrams.
+    2. The Planner agent uses in-context learning from these examples to generate
+       a detailed textual description (P) of the target diagram.
+    3. The Stylist agent refines the description to optimize visual aesthetics (P*).
 
-Phase 2 – Iterative Refinement:
-4. The Visualiser agent renders the description into an image using a
-   text-to-image generation model.
-5. The Critic agent evaluates the image on faithfulness, conciseness,
-   readability, and aesthetics, providing targeted revision feedback.
-6. Steps 4-5 repeat for up to 3 iterations until quality is satisfactory.
+    Phase 2 - Iterative Refinement:
+    4. The Visualizer agent renders the description into an image using a
+       text-to-image generation model.
+    5. The Critic agent evaluates the image on faithfulness, conciseness,
+       readability, and aesthetics, providing targeted revision feedback.
+    6. Steps 4-5 repeat for up to 3 iterations until quality is satisfactory.
+
 
 ## Caption
-Overview of the PaperBanana multi-agent framework for automated academic
-illustration generation.
+Overview of the PaperBanana multi-agent framework for automated academic illustration generation.
 """
 
 PLOT_PROMPT = """\

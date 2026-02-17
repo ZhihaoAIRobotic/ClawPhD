@@ -403,16 +403,31 @@ class CritiqueImageTool(Tool):
 # ---------------------------------------------------------------------------
 
 
+def _extract_fenced(response: str, marker: str) -> str | None:
+    """Extract content from a markdown code fence.
+
+    Looks for ``marker`` (e.g. "```python" or "```json") and returns
+    everything up to the closing ```````.  If the closing fence is missing
+    the remainder of the string is returned instead of raising.
+    """
+    if marker not in response:
+        return None
+    start = response.index(marker) + len(marker)
+    try:
+        end = response.index("```", start)
+    except ValueError:
+        end = len(response)
+    return response[start:end].strip()
+
+
 def _extract_python(response: str) -> str:
     """Extract a Python code block from a VLM response."""
-    if "```python" in response:
-        start = response.index("```python") + len("```python")
-        end = response.index("```", start)
-        return response[start:end].strip()
-    if "```" in response:
-        start = response.index("```") + 3
-        end = response.index("```", start)
-        return response[start:end].strip()
+    result = _extract_fenced(response, "```python")
+    if result is not None:
+        return result
+    result = _extract_fenced(response, "```")
+    if result is not None:
+        return result
     return response.strip()
 
 
@@ -420,17 +435,12 @@ def _extract_json(response: str) -> str:
     """Extract JSON from a VLM response, handling markdown code fences."""
     response = response.strip()
 
-    # Try to extract from ```json code fence
-    if "```json" in response:
-        start = response.index("```json") + len("```json")
-        end = response.index("```", start)
-        return response[start:end].strip()
-
-    # Try to extract from generic ``` code fence
-    if "```" in response:
-        start = response.index("```") + 3
-        end = response.index("```", start)
-        return response[start:end].strip()
+    result = _extract_fenced(response, "```json")
+    if result is not None:
+        return result
+    result = _extract_fenced(response, "```")
+    if result is not None:
+        return result
 
     # Return as-is (might already be valid JSON)
     return response

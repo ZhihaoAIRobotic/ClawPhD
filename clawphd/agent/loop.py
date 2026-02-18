@@ -24,6 +24,13 @@ from clawphd.agent.tools.paperbanana import (
     GenerateImageTool,
     CritiqueImageTool,
 )
+from clawphd.agent.tools.autopage import (
+    ParsePaperTool,
+    RenderHTMLTool,
+    MatchTemplateTool,
+    ReviewHTMLVisualTool,
+    ExtractTableHTMLTool,
+)
 from clawphd.agent.subagent import SubagentManager
 from clawphd.session.manager import SessionManager
 
@@ -142,6 +149,18 @@ class AgentLoop:
                 )
             )
             self.tools.register(CritiqueImageTool(vlm_provider=self.vlm_provider))
+
+        # AutoPage workflow tools
+        self.tools.register(ParsePaperTool(workspace=self.workspace, allowed_dir=allowed_dir))
+        self.tools.register(RenderHTMLTool(workspace=self.workspace, allowed_dir=allowed_dir))
+        self.tools.register(MatchTemplateTool(workspace=self.workspace, allowed_dir=allowed_dir))
+        if self.vlm_provider:
+            self.tools.register(
+                ReviewHTMLVisualTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
+            )
+            self.tools.register(
+                ExtractTableHTMLTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
+            )
 
     async def run(self) -> None:
         """Run the agent loop, processing messages from the bus."""

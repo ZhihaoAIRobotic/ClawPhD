@@ -21,7 +21,7 @@ An OpenClaw Agent for research that can turn academic papers into publication-re
 ```bash
 examples/diagram_generation_command.sh
 ```
-
+Generated results:
 ![Generated Results1](examples/diagram1.png)
 ![Generated Results2](examples/diagram2.png)
 

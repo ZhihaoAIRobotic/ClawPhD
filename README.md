@@ -16,6 +16,17 @@ An OpenClaw Agent for research that can turn academic papers into publication-re
 - [ ] **Poster Generation** — Produce conference-ready posters from papers
 - [ ] **Code Synthesis** — Extract and generate reproducible code from paper methodologies
 
+## Examples
+### Diagram Generation
+```bash
+examples/diagram_generation_command.sh
+```
+
+![Generated Results1](examples/diagram1.png)
+![Generated Results2](examples/diagram2.png)
+
+
+
 ## Quick Start
 
 ### 1. Install

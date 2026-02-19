@@ -75,6 +75,7 @@ Skills with available="false" need dependencies installed first - you can try in
         from datetime import datetime
         now = datetime.now().strftime("%Y-%m-%d %H:%M (%A)")
         workspace_path = str(self.workspace.expanduser().resolve())
+        builtin_skills_path = str(self.skills.builtin_skills.resolve())
         system = platform.system()
         runtime = f"{'macOS' if system == 'Darwin' else system} {platform.machine()}, Python {platform.python_version()}"
         
@@ -97,7 +98,13 @@ You are clawphd, a helpful AI assistant. You have access to tools that allow you
 Your workspace is at: {workspace_path}
 - Memory files: {workspace_path}/memory/MEMORY.md
 - Daily notes: {workspace_path}/memory/YYYY-MM-DD.md
+
+## Skills
+Skills are loaded from two directories (workspace overrides builtin if names conflict):
+- Built-in skills: {builtin_skills_path}/{{skill-name}}/SKILL.md
 - Custom skills: {workspace_path}/skills/{{skill-name}}/SKILL.md
+
+Each skill listed in the <skills> section below includes a <location> with its exact path — use that path to read the skill.
 
 IMPORTANT: When responding to direct questions or conversations, reply directly with your text response.
 Only use the 'message' tool when you need to send a message to a specific chat channel (like WhatsApp).

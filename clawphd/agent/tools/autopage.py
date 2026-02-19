@@ -1,14 +1,17 @@
-"""AutoPage-oriented tools for paper-to-webpage generation workflows."""
+"""Lightweight tools for paper-to-webpage generation workflows.
+
+Only dependency for PDF parsing is PyMuPDF (fitz).  All LLM work is left to
+the agent itself (through ClawPhD's own provider), so there is no need to
+import AutoPage's Python code or its heavy camel-ai / torch / FlagEmbedding
+stack.
+"""
 
 from __future__ import annotations
 
 import json
-import os
 import re
-import sys
 from datetime import datetime
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 from clawphd.agent.tools.base import Tool
@@ -36,13 +39,17 @@ def _extract_json(response: str) -> str:
     return text
 
 
+# ---------------------------------------------------------------------------
+# parse_paper – pymupdf4llm for markdown, PyMuPDF for figure extraction
+# ---------------------------------------------------------------------------
+
 class ParsePaperTool(Tool):
-    """Parse a PDF and extract markdown/images/tables."""
+    """Parse a PDF into markdown with figure screenshots and captions."""
 
     name = "parse_paper"
     description = (
-        "Parse an academic PDF into markdown content plus extracted images/tables. "
-        "Uses AutoPage parser when available."
+        "Parse an academic PDF into markdown (via pymupdf4llm) and extract "
+        "complete figures with captions as high-res screenshots."
     )
     parameters = {
         "type": "object",
@@ -53,34 +60,105 @@ class ParsePaperTool(Tool):
             },
             "output_dir": {
                 "type": "string",
-                "description": "Directory to save parsed output JSON (default: project_contents).",
-            },
-            "model_name_t": {
-                "type": "string",
-                "description": "Text model name for AutoPage parser (default: 4o-mini).",
-            },
-            "parser_version": {
-                "type": "integer",
-                "description": "AutoPage parser version, usually 2.",
-                "minimum": 1,
-                "maximum": 3,
+                "description": "Directory for parsed output (default: project_contents).",
             },
         },
         "required": ["pdf_path"],
     }
 
+    RENDER_SCALE = 3
+
     def __init__(self, workspace: Path, allowed_dir: Path | None = None):
         self._workspace = workspace
         self._allowed_dir = allowed_dir
+
+    @staticmethod
+    def _extract_figures(doc: Any, img_dir: Path, scale: int = 3) -> list[dict]:
+        """Locate 'Figure N:' captions, crop the figure region above, render as PNG."""
+        import fitz  # noqa: F811
+
+        figures: list[dict] = []
+        seen: set[int] = set()
+        fig_pattern = re.compile(r"Figure\s+(\d+)\s*[:.]")
+
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            pw, ph = page.rect.width, page.rect.height
+            blocks = page.get_text("dict")["blocks"]
+
+            for blk in blocks:
+                if blk["type"] != 0:
+                    continue
+                text = "".join(
+                    span["text"]
+                    for line in blk["lines"]
+                    for span in line["spans"]
+                )
+                m = fig_pattern.search(text)
+                if not m:
+                    continue
+
+                fig_num = int(m.group(1))
+                if fig_num in seen:
+                    continue
+                seen.add(fig_num)
+
+                caption = text[m.start():].strip()
+                cx0, cy0, cx1, cy1 = blk["bbox"]
+
+                img_top = cy0
+                for ob in blocks:
+                    if ob["type"] == 1:
+                        iy1 = ob["bbox"][3]
+                        if iy1 <= cy1 + 5 and ob["bbox"][1] < img_top:
+                            img_top = ob["bbox"][1]
+
+                margin = 5
+                crop = fitz.Rect(
+                    max(0, min(cx0, 72) - margin),
+                    max(0, img_top - margin),
+                    min(pw, max(cx1, pw - 72) + margin),
+                    min(ph, cy1 + margin),
+                )
+
+                mat = fitz.Matrix(scale, scale)
+                pix = page.get_pixmap(matrix=mat, clip=crop)
+                fname = f"figure_{fig_num}.png"
+                pix.save(str(img_dir / fname))
+                figures.append({
+                    "figure_num": fig_num,
+                    "page": page_num + 1,
+                    "caption": caption,
+                    "path": str(img_dir / fname),
+                    "width": pix.width,
+                    "height": pix.height,
+                })
+
+        figures.sort(key=lambda f: f["figure_num"])
+        return figures
 
     async def execute(
         self,
         pdf_path: str,
         output_dir: str = "project_contents",
-        model_name_t: str = "4o-mini",
-        parser_version: int = 2,
         **kwargs: Any,
     ) -> str:
+        try:
+            import fitz  # noqa: F811
+        except ImportError:
+            return json.dumps({
+                "status": "error",
+                "message": "PyMuPDF is required. Install with: pip install PyMuPDF",
+            })
+
+        try:
+            import pymupdf4llm
+        except ImportError:
+            return json.dumps({
+                "status": "error",
+                "message": "pymupdf4llm is required. Install with: pip install pymupdf4llm",
+            })
+
         try:
             pdf = _resolve_path(pdf_path, self._allowed_dir)
             if not pdf.exists():
@@ -88,97 +166,62 @@ class ParsePaperTool(Tool):
             if pdf.suffix.lower() != ".pdf":
                 return f"Error: Expected a PDF file, got: {pdf.name}"
 
-            out_dir = _resolve_path(
+            out = _resolve_path(
                 output_dir if Path(output_dir).is_absolute() else str(self._workspace / output_dir),
                 self._allowed_dir,
             )
-            out_dir.mkdir(parents=True, exist_ok=True)
+            out.mkdir(parents=True, exist_ok=True)
+            fig_dir = out / "figures"
+            fig_dir.mkdir(exist_ok=True)
 
-            autopage_root = self._workspace / "AutoPage"
-            if not autopage_root.exists():
-                return (
-                    "Error: AutoPage directory not found at workspace root. "
-                    "Expected: <workspace>/AutoPage"
-                )
+            # 1. Markdown via pymupdf4llm (includes inline image refs)
+            markdown = pymupdf4llm.to_markdown(str(pdf), page_chunks=False)
+            md_path = out / f"{pdf.stem}_content.md"
+            md_path.write_text(markdown, encoding="utf-8")
 
-            if str(autopage_root) not in sys.path:
-                sys.path.insert(0, str(autopage_root))
+            # 2. Extract complete figures (page-render crop at caption locations)
+            doc = fitz.open(str(pdf))
+            num_pages = len(doc)
+            title = doc.metadata.get("title", "") or pdf.stem
+            figures = self._extract_figures(doc, fig_dir, scale=self.RENDER_SCALE)
+            doc.close()
 
-            # Prefer AutoPage parser path; fallback to lightweight output if unavailable.
-            try:
-                from ProjectPageAgent.parse_paper import (  # type: ignore
-                    parse_paper_for_project_page,
-                    save_parsed_content,
-                )
-                from utils.wei_utils import get_agent_config  # type: ignore
+            # 3. Save structured JSON
+            parsed = {
+                "paper_name": pdf.stem,
+                "title": title,
+                "num_pages": num_pages,
+                "figures": figures,
+            }
+            json_path = out / f"{pdf.stem}_parsed.json"
+            json_path.write_text(
+                json.dumps(parsed, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
 
-                paper_name = pdf.stem
-                args = SimpleNamespace(
-                    paper_path=str(pdf),
-                    paper_name=paper_name,
-                    poster_path=str(pdf),
-                    poster_name=paper_name,
-                    model_name_t=model_name_t,
-                )
-                cfg = get_agent_config(model_name_t)
+            return json.dumps({
+                "status": "ok",
+                "paper_name": pdf.stem,
+                "title": title,
+                "parsed_json_path": str(json_path),
+                "markdown_path": str(md_path),
+                "figures_dir": str(fig_dir),
+                "figures_count": len(figures),
+                "figures": [
+                    {"num": f["figure_num"], "caption": f["caption"][:120], "path": f["path"]}
+                    for f in figures
+                ],
+                "num_pages": num_pages,
+            }, ensure_ascii=False, indent=2)
 
-                # AutoPage writes under current working directory; switch to workspace.
-                cwd = os.getcwd()
-                os.chdir(str(autopage_root))
-                try:
-                    in_tok, out_tok, raw_result, images, tables = parse_paper_for_project_page(
-                        args=args,
-                        agent_config_t=cfg,
-                        version=parser_version,
-                    )
-                    raw_content_path, token_log_path = save_parsed_content(
-                        args=args,
-                        raw_result=raw_result,
-                        images=images,
-                        tables=tables,
-                        input_token=in_tok,
-                        output_token=out_tok,
-                    )
-                finally:
-                    os.chdir(cwd)
-
-                # Move resulting files into requested output_dir for consistency.
-                raw_src = (autopage_root / raw_content_path).resolve()
-                token_src = (autopage_root / token_log_path).resolve()
-                raw_dst = out_dir / f"{pdf.stem}_raw_content.json"
-                token_dst = out_dir / f"{pdf.stem}_parse_log.json"
-
-                if raw_src.exists():
-                    raw_dst.write_text(raw_src.read_text(encoding="utf-8"), encoding="utf-8")
-                if token_src.exists():
-                    token_dst.write_text(token_src.read_text(encoding="utf-8"), encoding="utf-8")
-
-                return json.dumps(
-                    {
-                        "status": "ok",
-                        "paper_name": pdf.stem,
-                        "raw_content_path": str(raw_dst),
-                        "token_log_path": str(token_dst),
-                        "images_count": len(images),
-                        "tables_count": len(tables),
-                        "tokens": {
-                            "input": in_tok,
-                            "output": out_tok,
-                        },
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                )
-            except Exception as e:
-                return (
-                    "Error: parse_paper failed to run AutoPage parser. "
-                    f"Reason: {e}. Ensure AutoPage dependencies and model credentials are configured."
-                )
         except PermissionError as e:
             return f"Error: {e}"
         except Exception as e:
             return f"Error parsing paper: {e}"
 
+
+# ---------------------------------------------------------------------------
+# render_html – Playwright screenshot
+# ---------------------------------------------------------------------------
 
 class RenderHTMLTool(Tool):
     """Render HTML into a PNG screenshot."""
@@ -216,10 +259,7 @@ class RenderHTMLTool(Tool):
                 return f"Error: HTML file not found: {html_path}"
 
             if output_path:
-                target = _resolve_path(
-                    output_path,
-                    self._allowed_dir,
-                )
+                target = _resolve_path(output_path, self._allowed_dir)
             else:
                 out_dir = self._workspace / "outputs" / "renders"
                 out_dir.mkdir(parents=True, exist_ok=True)
@@ -229,7 +269,7 @@ class RenderHTMLTool(Tool):
 
             try:
                 from playwright.async_api import async_playwright
-            except Exception:
+            except ImportError:
                 return (
                     "Error: Playwright is not installed. Install with "
                     "`pip install playwright && playwright install chromium`."
@@ -244,19 +284,20 @@ class RenderHTMLTool(Tool):
                 await page.screenshot(path=str(target), full_page=full_page)
                 await browser.close()
 
-            return json.dumps(
-                {
-                    "status": "ok",
-                    "html_path": str(html_file),
-                    "screenshot_path": str(target),
-                },
-                indent=2,
-            )
+            return json.dumps({
+                "status": "ok",
+                "html_path": str(html_file),
+                "screenshot_path": str(target),
+            }, indent=2)
         except PermissionError as e:
             return f"Error: {e}"
         except Exception as e:
             return f"Error rendering HTML: {e}"
 
+
+# ---------------------------------------------------------------------------
+# match_template – tag-based template ranking (reads tags.json)
+# ---------------------------------------------------------------------------
 
 class MatchTemplateTool(Tool):
     """Rank template directories using style preferences and tags metadata."""
@@ -268,7 +309,7 @@ class MatchTemplateTool(Tool):
         "properties": {
             "tags_path": {
                 "type": "string",
-                "description": "Path to tags.json. Defaults to AutoPage/tags.json.",
+                "description": "Path to tags.json.",
             },
             "template_root": {
                 "type": "string",
@@ -299,9 +340,23 @@ class MatchTemplateTool(Tool):
         "has_navigation": 0.7,
     }
 
+    # Bundled templates live at clawphd/templates/ next to clawphd/agent/
+    _BUILTIN_TEMPLATES = Path(__file__).resolve().parent.parent.parent / "templates"
+
     def __init__(self, workspace: Path, allowed_dir: Path | None = None):
         self._workspace = workspace
         self._allowed_dir = allowed_dir
+
+    def _find_tags_json(self) -> Path | None:
+        """Search known locations for tags.json."""
+        candidates = [
+            self._BUILTIN_TEMPLATES / "tags.json",
+            self._workspace / "templates" / "tags.json",
+        ]
+        for c in candidates:
+            if c.exists():
+                return c
+        return None
 
     async def execute(
         self,
@@ -320,7 +375,12 @@ class MatchTemplateTool(Tool):
             if tags_path:
                 tags_file = _resolve_path(tags_path, self._allowed_dir)
             else:
-                tags_file = (self._workspace / "AutoPage" / "tags.json").resolve()
+                tags_file = self._find_tags_json()
+                if tags_file is None:
+                    return (
+                        "Error: tags.json not found. Provide tags_path or place "
+                        "templates/tags.json in the workspace."
+                    )
 
             if not tags_file.exists():
                 return f"Error: tags file not found: {tags_file}"
@@ -346,33 +406,36 @@ class MatchTemplateTool(Tool):
                 scores[name] = score
 
             ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:top_k]
+
             root = None
             if template_root:
                 root = _resolve_path(template_root, self._allowed_dir)
+            else:
+                root = tags_file.parent
 
-            return json.dumps(
-                {
-                    "status": "ok",
-                    "request": req,
-                    "top_k": top_k,
-                    "candidates": [
-                        {
-                            "name": name,
-                            "score": score,
-                            "path": str((root / name).resolve()) if root else name,
-                            "tags": tags.get(name, {}),
-                        }
-                        for name, score in ranked
-                    ],
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
+            return json.dumps({
+                "status": "ok",
+                "request": req,
+                "top_k": top_k,
+                "candidates": [
+                    {
+                        "name": name,
+                        "score": score,
+                        "path": str((root / name).resolve()) if root else name,
+                        "tags": tags.get(name, {}),
+                    }
+                    for name, score in ranked
+                ],
+            }, ensure_ascii=False, indent=2)
         except PermissionError as e:
             return f"Error: {e}"
         except Exception as e:
             return f"Error matching templates: {e}"
 
+
+# ---------------------------------------------------------------------------
+# review_html_visual – VLM-based screenshot review
+# ---------------------------------------------------------------------------
 
 class ReviewHTMLVisualTool(Tool):
     """Use a VLM to review rendered HTML screenshot quality."""
@@ -422,7 +485,7 @@ class ReviewHTMLVisualTool(Tool):
 
             try:
                 from PIL import Image
-            except Exception:
+            except ImportError:
                 return "Error: Pillow is required for image review (pip install pillow)."
 
             image = Image.open(path).convert("RGB")
@@ -457,20 +520,20 @@ class ReviewHTMLVisualTool(Tool):
                 parsed = json.loads(payload)
                 return json.dumps(parsed, ensure_ascii=False, indent=2)
             except Exception:
-                return json.dumps(
-                    {
-                        "critic_suggestions": [payload[:1000]],
-                        "priority": "medium",
-                        "revised_html_guidance": [],
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                )
+                return json.dumps({
+                    "critic_suggestions": [payload[:1000]],
+                    "priority": "medium",
+                    "revised_html_guidance": [],
+                }, ensure_ascii=False, indent=2)
         except PermissionError as e:
             return f"Error: {e}"
         except Exception as e:
             return f"Error reviewing screenshot: {e}"
 
+
+# ---------------------------------------------------------------------------
+# extract_table_html – VLM-based table-image → HTML
+# ---------------------------------------------------------------------------
 
 class ExtractTableHTMLTool(Tool):
     """Convert table image into HTML table markup via VLM."""
@@ -512,7 +575,7 @@ class ExtractTableHTMLTool(Tool):
 
             try:
                 from PIL import Image
-            except Exception:
+            except ImportError:
                 return "Error: Pillow is required for table extraction (pip install pillow)."
 
             image = Image.open(path).convert("RGB")

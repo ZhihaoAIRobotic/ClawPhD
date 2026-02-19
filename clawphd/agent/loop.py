@@ -150,10 +150,14 @@ class AgentLoop:
             )
             self.tools.register(CritiqueImageTool(vlm_provider=self.vlm_provider))
 
-        # AutoPage workflow tools
+        # Page generation workflow tools
         self.tools.register(ParsePaperTool(workspace=self.workspace, allowed_dir=allowed_dir))
         self.tools.register(RenderHTMLTool(workspace=self.workspace, allowed_dir=allowed_dir))
-        self.tools.register(MatchTemplateTool(workspace=self.workspace, allowed_dir=allowed_dir))
+
+        self.tools.register(MatchTemplateTool(
+            workspace=self.workspace,
+            allowed_dir=allowed_dir,
+        ))
         if self.vlm_provider:
             self.tools.register(
                 ReviewHTMLVisualTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)

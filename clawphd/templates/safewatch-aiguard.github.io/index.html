@@ -1,0 +1,2892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human-Agent Collaborative Paper-to-Page Crafting for Under $0.1</title>
+    <link rel="icon" type="image/x-icon" href="figures/favicon.ico">
+    <script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],   
+      displayMath: [['$$', '$$'], ['\\[', '\\]']] 
+    }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap');
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #000000;
+            padding: 10px 0;
+        }
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .logo img {
+            height: 40px;
+            margin-right: 10px;
+        }
+        .logo span {
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(to right, #cc0000, #3399ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+        .nav-links a {
+            color: #ffffff;
+            text-decoration: none;
+            margin-left: 20px;
+        }
+        .main-content {
+            max-width: 1400px; /* Reduced from 1600px to 1400px */
+            margin: 0 auto;
+            padding: 30px -40px;
+            text-align: center;
+        }
+        .main-title {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .main-logo {
+            height: 100px;
+            margin-right: 20px;
+        }
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 64px;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(to right, #cc0000, #3399ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            font-family: 'Raleway', sans-serif;
+            font-size: 28px;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+            color: #e0e0e0;
+            max-width: 800px;
+            margin: 20px auto 30px;
+            line-height: 1.4;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        .authors {
+            font-family: 'Raleway', sans-serif;
+            font-size: 20px;
+            font-weight: 400;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+        }
+        .affiliations {
+            font-family: 'Raleway', sans-serif;
+            font-size: 16px;
+            font-weight: 300;
+            margin-bottom: 30px;
+            color: #888;
+        }
+        sup {
+            font-size: 12px;
+            vertical-align: super;
+        }
+        .affiliation {
+            background-color: #ffffff;
+            border-radius: 25px;
+            padding: 10px 20px;
+        }
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 35px;
+        }
+        .button {
+            background-color: #333333;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .video-grid {
+            width: 100%;
+            margin: 0 auto;
+        }
+        .grid-sizer,
+        .video-item {
+            width: calc(33.333% - 20px);
+        }
+        .video-item {
+            margin-bottom: 20px;
+            background-color: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .video-item video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .flag {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            z-index: 2;
+        }
+        .video-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            color: white;
+            text-align: left;
+            font-family: 'Raleway', sans-serif;
+            overflow: hidden;
+        }
+        .video-caption p {
+            margin: 8px 0;
+            font-size: 14px;
+            line-height: 1.2;
+            font-family: 'Raleway', sans-serif;
+            display: flex;
+        }
+        .video-caption .streaming-text {
+            display: none;
+            white-space: pre-wrap;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 13px;
+            opacity: 0;
+        }
+        .video-item:hover .streaming-text {
+            display: inline;
+            opacity: 1;
+        }
+        .typing {
+            display: inline;
+            opacity: 1;
+            animation: typing 2s steps(60, end);
+        }
+        @keyframes typing {
+            from { 
+                width: 0;
+                opacity: 0;
+            }
+            to { 
+                width: 100%;
+                opacity: 1;
+            }
+        }
+        .typing::after {
+            content: '|';
+            animation: blink 0.7s infinite;
+            color: #cc0000;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        .video-item:hover {
+            box-shadow: 0 0 10px 3px rgba(255, 0, 0, 0.5);
+        }
+        .video-item:hover video {
+            filter: brightness(0.7);
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        @media (max-width: 1200px) {
+            .video-item {
+                width: calc(50% - 20px);
+            }
+            .video-item.wide {
+                width: calc(100% - 20px);
+            }
+        }
+        @media (max-width: 900px) {
+            .video-item {
+                width: calc(50% - 20px);
+            }
+        }
+        @media (max-width: 600px) {
+            .video-item {
+                width: 100%;
+            }
+            .video-item.wide {
+                width: 100%;
+            }
+        }
+
+        .filter-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-button {
+            background-color: #333333;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .filter-button:hover {
+            background-color: #555555;
+        }
+
+        .filter-button.active {
+            background-color: #cc0000;
+        }
+
+        /* Add this new style for the active Benign button */
+        .filter-button[data-filter="benign"].active {
+            background-color: #00cc00;
+        }
+
+        .filter-button[data-filter="benign"].active:hover {
+            background-color: #00ff00;
+        }
+
+        .sub-filter-container {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.5s ease-out;
+        }
+
+        .sub-filter-container.active {
+            max-height: 100px; /* Adjust based on your content */
+        }
+
+        .sub-filter-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .sub-filter-container.active .sub-filter-buttons {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .sub-filter-button {
+            background-color: #555555;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .sub-filter-button:hover,
+        .sub-filter-button.active {
+            background-color: #cc0000;
+        }
+
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* Separator Styles */
+        .separator {
+            height: 2px;
+            background: linear-gradient(to right, #cc0000, #3399ff);
+            margin: 60px 0;
+        }
+
+        /* Video Grid Container */
+        #grid-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* SafeWatch-Bench Section Styles */
+        .safewatch-bench {
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+            padding: 80px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .safewatch-bench::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('https://safewatch-aiguard.github.io/path/to/subtle-pattern.png') repeat;
+            opacity: 0.05;
+            z-index: 1;
+        }
+
+        .safewatch-bench h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            color: #ffffff;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .safewatch-bench p {
+            font-family: 'Raleway', sans-serif;
+            font-size: 18px;
+            color: #cccccc;
+            max-width: 800px;
+            margin: 0 auto 40px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .dataset-figure {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .dataset-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .dataset-figure:hover .dataset-image {
+            transform: scale(1.02);
+        }
+
+        @media (max-width: 768px) {
+            .safewatch-bench {
+                padding: 60px 20px;
+            }
+
+            .safewatch-bench h2 {
+                font-size: 36px;
+            }
+
+            .safewatch-bench p {
+                font-size: 16px;
+            }
+        }
+
+        /* Video Grid Container */
+        #video-section {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            height: 1000px;
+            overflow-y: auto;
+            filter: blur(5px);
+            transition: filter 0.3s ease;
+            pointer-events: none;
+            margin-bottom: 40px; /* Add space between video section and dataset section */
+        }
+
+        #video-section.unlocked {
+            filter: none;
+            pointer-events: auto; /* Re-enable interaction when unlocked */
+        }
+
+        /* Style the scrollbar for a nicer look */
+        #video-section::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        #video-section::-webkit-scrollbar-thumb {
+            background-color: #ccc;
+            border-radius: 10px;
+            border: 3px solid #333;
+        }
+
+        #video-section::-webkit-scrollbar-track {
+            background-color: #444;
+        }
+
+        /* See Demos Button */
+        .see-demos-button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #cc0000;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: background-color 0.3s ease;
+        }
+
+        .see-demos-button:hover {
+            background-color: #ff3333;
+        }
+
+        /* Centered Title */
+        .centered-title {
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 36px;
+            color: #ffffff;
+            margin: 0 0 10px;
+            padding-top: 5px;
+        }
+
+        .left-title {
+            text-align: left;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 36px;
+            color: #ffffff;
+            margin: 0 0 10px;
+            padding-top: 5px;
+        }
+
+        /* Image and Caption */
+        .image-container {
+            text-align: center;
+            margin: 20px auto;
+            max-width: 1100px; /* Match section container width */
+            padding: 0 20px;
+        }
+
+        .image-container img {
+            max-width: 75%; /* Reduced from 100% to 80% */
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            margin-top: 24px; /* Added margin-top */
+            margin-bottom: 24px; /* Added margin-bottom */
+        }
+
+        .caption {
+            font-family: 'Raleway', sans-serif;
+            font-size: 16px;
+            color: #cccccc;
+            max-width: 1000px; /* Match section container width */
+            margin: 20px auto;
+            text-align: justify; /* Aligned text to the center */
+            line-height: 1.6;
+        }
+
+        /* Video module container */
+        .video-module {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 1000px;
+        }
+
+        .video-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .video-item {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .video-item video {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        .flag {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: red;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 2;
+        }
+
+        .video-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+        }
+
+        .video-caption p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .video-caption strong {
+            color: #ccc;
+        }
+
+        /* Dataset info section (always visible, no blur) */
+        .dataset-info {
+            padding: 20px;
+            background-color: #1a1a1a;
+            border-radius: 0 0 12px 12px;
+            margin-bottom: 20px; /* Reduced from 40px to 20px */
+        }
+
+        /* Method section (separate) */
+        .method-section {
+            max-width: 1400px;
+            margin: 40px auto; /* Reduced from 80px to 40px */
+            padding: 0 20px;
+        }
+
+        /* Custom scrollbar */
+        #video-section::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        #video-section::-webkit-scrollbar-track {
+            background: #2a2a2a;
+            border-radius: 5px;
+        }
+
+        #video-section::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+            border-radius: 5px;
+        }
+
+        #video-section::-webkit-scrollbar-thumb:hover {
+            background: #5a5a5a;
+        }
+
+        /* Animation for the border */
+        @keyframes gradientBorder {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .filter-buttons {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .filter-button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 4px;
+            background: #333;
+            color: white;
+            cursor: pointer;
+        }
+
+        .filter-button.active {
+            background: #cc0000;
+        }
+
+        .sub-filter-container {
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .sub-filter-buttons {
+            display: none;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .sub-filter-button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #444;
+            color: white;
+            cursor: pointer;
+        }
+
+        .sub-filter-button.active {
+            background: #cc0000;
+        }
+
+        /* Add different sizes for variety */
+        .video-item.wide {
+            width: calc(66.666% - 20px); /* 2x width */
+        }
+
+        .video-item.tall video {
+            /* Remove aspect-ratio: 9/16; */
+        }
+
+        .video-item.wide video {
+            /* Remove aspect-ratio: 21/9; */
+        }
+
+        .flag-sexual-hentai {
+            background: linear-gradient(135deg, #ff69b4, #ff1493);
+        }
+
+        .flag-abuse-animal {
+            background: linear-gradient(135deg, #8B0000, #FF4500);
+        }
+
+        .flag-abuse-campus {
+            background: linear-gradient(135deg, #FF4500, #FF8C00);
+        }
+
+        .flag-abuse-child {
+            background: linear-gradient(135deg, #8B0000, #DC143C);
+        }
+
+        .flag-abuse-sexual {
+            background: linear-gradient(135deg, #800080, #FF1493);
+        }
+
+        .flag-violence-assault {
+            background: linear-gradient(135deg, #FF0000, #FF4500);
+        }
+
+        .flag-violence-fighting {
+            background: linear-gradient(135deg, #FF4500, #FF8C00);
+        }
+
+        .flag-violence-shooting {
+            background: linear-gradient(135deg, #8B0000, #DC143C);
+        }
+
+        .flag-violence-sexual-violence {
+            background: linear-gradient(135deg, #800080, #FF1493);
+        }
+
+        .flag-violence-vandalism {
+            background: linear-gradient(135deg, #FF6347, #FF4500);
+        }
+
+        .flag-illegal-robbery {
+            background: linear-gradient(135deg, #8B0000, #FF4500);
+        }
+
+        .flag-illegal-shoplifting {
+            background: linear-gradient(135deg, #FF6347, #FF8C00);
+        }
+
+        .flag-illegal-war {
+            background: linear-gradient(135deg, #8B0000, #DC143C);
+        }
+
+        .flag-extremism-selfharm {
+            background: linear-gradient(135deg, #800000, #FF4500);
+        }
+
+        .flag-extremism-disturbing {
+            background: linear-gradient(135deg, #4B0082, #8B0000);
+        }
+
+        .flag-extremism-antisocial {
+            background: linear-gradient(135deg, #2F4F4F, #4A4A4A);
+        }
+
+        .flag-extremism-depression {
+            background: linear-gradient(135deg, #483D8B, #4682B4);
+        }
+
+        .flag-misinformation-acting {
+            background: linear-gradient(135deg, #FFA500, #FF8C00);
+        }
+
+        .flag-misinformation-deepfake {
+            background: linear-gradient(135deg, #00008B, #0000FF);
+        }
+
+        .flag-misinformation-misinformation {
+            background: linear-gradient(135deg, #FF0000, #FF4500);
+        }
+
+        .flag-misinformation-out-of-date {
+            background: linear-gradient(135deg, #808080, #FFFFFF);
+        }
+
+        .see-demos-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 40px 0; /* Increased margin */
+        }
+
+        .see-demos-button {
+            padding: 15px 40px; /* Larger padding */
+            background: linear-gradient(45deg, #cc0000, #ff3333);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.3em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(204, 0, 0, 0.3);
+            animation: buttonPulse 2s infinite;
+        }
+
+        .see-demos-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(204, 0, 0, 0.5);
+            background: linear-gradient(45deg, #ff3333, #ff6666);
+        }
+
+        .see-demos-button::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(255, 255, 255, 0.1),
+                transparent
+            );
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+
+        /* Animations */
+        @keyframes buttonPulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                left: -50%;
+            }
+            100% {
+                left: 150%;
+            }
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            position: relative;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            margin: 15% auto;
+            padding: 0;
+            width: 400px;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        .modal-header {
+            padding: 20px;
+            background: linear-gradient(145deg, #cc0000, #990000);
+            border-radius: 15px 15px 0 0;
+            color: white;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-body {
+            padding: 20px;
+            color: #ffffff;
+            font-family: 'Raleway', sans-serif;
+            font-size: 1.1em;
+            line-height: 1.5;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-top: 1px solid #333;
+        }
+
+        .modal-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Raleway', sans-serif;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .cancel-btn {
+            background-color: #333;
+            color: white;
+        }
+
+        .confirm-btn {
+            background: linear-gradient(145deg, #cc0000, #990000);
+            color: white;
+        }
+
+        .modal-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .cancel-btn:hover {
+            background-color: #444;
+        }
+
+        .confirm-btn:hover {
+            background: linear-gradient(145deg, #ff0000, #cc0000);
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Enhance the concealment and add darkening overlay */
+        #video-section:not(.unlocked) {
+            position: relative;
+            pointer-events: none;
+        }
+
+        #video-section:not(.unlocked)::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8); /* Darker overlay without blur */
+            z-index: 2;
+        }
+
+        /* Remove the hint message */
+        #video-section:not(.unlocked)::after {
+            content: none;
+        }
+
+        /* Update the modal button styles */
+        .modal-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Raleway', sans-serif;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .confirm-btn {
+            background: linear-gradient(145deg, #cc0000, #990000);
+            color: white;
+        }
+
+        /* Add these new styles for disabled state */
+        .confirm-btn:disabled {
+            background: linear-gradient(145deg, #666666, #444444);
+            cursor: not-allowed;
+            opacity: 0.7;
+            color: #cccccc;
+        }
+
+        .confirm-btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Update these styles in your existing CSS */
+        .overview-section {
+            max-width: 1100px;
+            margin: 5px auto;
+            padding: 20px 30px;
+            background: linear-gradient(135deg, rgba(40, 40, 40, 0.9), rgba(30, 30, 30, 0.95));
+            border-radius: 20px;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.3),
+                inset 0 1px 1px rgba(255, 255, 255, 0.07);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .overview-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(
+                    circle at top right,
+                    rgba(204, 0, 0, 0.08),
+                    transparent 40%
+                ),
+                radial-gradient(
+                    circle at bottom left,
+                    rgba(51, 153, 255, 0.08),
+                    transparent 40%
+                );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .overview-content {
+            position: relative;
+            z-index: 2;
+            backdrop-filter: blur(10px);
+        }
+
+        .highlight-text {
+            font-size: 15px;
+            color: #ffffff;
+            font-weight: 400;
+            margin-top: 5px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            text-align: left;
+            font-family: 'Raleway', sans-serif;
+        }
+
+        .key-features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Enhanced feature box styling */
+        .feature {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Remove the icon glow effect */
+        .feature-icon::after {
+            display: none;
+        }
+
+        .feature-text {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 7px;
+            font-family: 'Orbitron', sans-serif;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .feature p {
+            font-size: 14px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+            font-family: 'Raleway', sans-serif;
+        }
+
+        .performance-highlights {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .highlight-box {
+            padding: 18px;
+            border-radius: 12px;
+            text-align: left;
+            transition: all 0.3s ease;
+            background: linear-gradient(145deg, #cc0000, #990000);
+        }
+
+        .model-stats, .dataset-stats, .benchmark-stats {
+            background: linear-gradient(145deg, #cc0000, #990000);
+        }
+
+        .highlight-number {
+            font-size: 30px;
+            font-weight: 700;
+            color: #ffffff;
+            display: block;
+            font-family: 'Orbitron', sans-serif;
+            margin-bottom: 4px;
+        }
+
+        .highlight-label {
+            font-size: 15px;
+            color: #ffffff;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .sub-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .key-features,
+            .performance-highlights {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .highlight-text {
+                font-size: 16px;
+            }
+            
+            .feature-text {
+                font-size: 16px;
+            }
+        }
+
+        /* Update these styles */
+        .overview-text {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Enhance the gradient text */
+        .gradient-text {
+            background: linear-gradient(45deg, #cc0000, #3399ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 20px rgba(204, 0, 0, 0.3);
+            position: relative;
+            display: inline-block;
+        }
+
+        /* Add this style to match the white color of the text */
+        .highlight-text strong {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        /* Add these styles */
+        .overview-label {
+            color: #ffffff;
+            font-weight: 700;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            padding-right: 4px;
+            font-size: 16px;
+        }
+
+        .highlight-text strong {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        /* Add these styles */
+        .feature-logo {
+            width: 28px;  /* Increased size */
+            height: 28px;
+            object-fit: contain;
+            filter: brightness(1.1);
+            margin-right: -1px;  /* Adjusted spacing for larger icon */
+            margin-bottom: -6px;
+            transform: translateY(-6px);
+        }
+
+        .feature-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .feature-text {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            font-family: 'Orbitron', sans-serif;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        /* If you need to adjust spacing between features */
+        .key-features {
+            display: flex;
+            gap: 20px;
+            justify-content: space-between;
+        }
+
+        /* Target only the second and third feature boxes */
+        .feature:nth-child(2) .feature-text,
+        .feature:nth-child(3) .feature-text {
+            margin-bottom: 20px; /* Add space after the title */
+        }
+
+        .feature:nth-child(2) p:first-of-type,
+        .feature:nth-child(3) p:first-of-type {
+            margin-top: -4px; /* Add space before the description */
+        }
+
+        /* Keep the first feature (SafeWatch Model) as is */
+        .feature:first-child .feature-text {
+            margin-bottom: 5px; /* Original spacing */
+        }
+
+        /* Add these new styles for the streaming effect */
+        .caption-content {
+            display: none;
+            white-space: pre-wrap;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 13px;
+            opacity: 0;
+        }
+
+        .video-item:hover .caption-content {
+            display: inline;
+            opacity: 1;
+        }
+
+        .typing {
+            display: inline;
+            opacity: 1;
+            animation: typing 2s steps(60, end);
+        }
+
+        @keyframes typing {
+            from { 
+                width: 0;
+                opacity: 0;
+            }
+            to { 
+                width: 100%;
+                opacity: 1;
+            }
+        }
+
+        /* Add cursor animation */
+        .typing::after {
+            content: '|';
+            animation: blink 0.7s infinite;
+            color: #cc0000;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .dataset-info .caption,
+        .method-section .caption,
+        .data-curation-section .caption {
+            max-width: 1000px; /* Match the section text width */
+            text-align: justify; /* Align text to the center */
+            margin: 20px auto 0; /* Adjust margin to align with image */
+        }
+
+        .visitor-stats-container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 20px auto 40px;
+            text-align: center;
+        }
+
+        .stats-toggle-btn {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: #ffffff;
+            font-family: 'Raleway', sans-serif;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .stats-toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+        }
+
+        .stats-icon {
+            font-size: 20px;
+        }
+
+        .chevron {
+            transition: transform 0.3s ease;
+        }
+
+        .stats-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 0 0 10px 10px;
+            margin-top: 0;
+        }
+
+        .stats-content.expanded {
+            max-height: 400px;
+            margin-top: 20px;
+            padding: 20px;
+        }
+
+        .stats-toggle-btn.expanded .chevron {
+            transform: rotate(180deg);
+        }
+
+        .feature-text {
+            transition: color 0.3s ease;
+        }
+        
+        .feature-text:hover {
+            color: #cc0000;
+        }
+
+        /* Add these specific styles for the dataset and demo modals */
+        #datasetModal .modal-header,
+        #demoModal .modal-header {
+            background: linear-gradient(145deg, #FFD700, #FFA500);
+        }
+
+        #datasetModal .confirm-btn,
+        #demoModal .confirm-btn {
+            background: linear-gradient(145deg, #FFD700, #FFA500);
+        }
+
+        #datasetModal .confirm-btn:hover,
+        #demoModal .confirm-btn:hover {
+            background: linear-gradient(145deg, #FFA500, #FF8C00);
+        }
+
+        .visitor-stats-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 19px;
+            color: #ffffff;
+        }
+
+        .visitor-stats-title::before,
+        .visitor-stats-title::after {
+            content: '';
+            position: absolute;
+            height: 2px;
+            width: 20%;
+            top: 50%;
+            background: linear-gradient(to right, transparent, rgba(204, 0, 0, 0.5), transparent);
+            display: none;  /* Add this line to hide the elements */
+        }
+
+        .visitor-stats-title::before {
+            left: 5%;
+        }
+
+        .visitor-stats-title::after {
+            right: 5%;
+        }
+
+        .method-section:last-child {
+            margin-bottom: 60px;
+        }
+        
+        .method-section:last-child .overview-section {
+            background: linear-gradient(135deg, rgba(40, 40, 40, 0.9), rgba(30, 30, 30, 0.95));
+            border-radius: 20px;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.3),
+                inset 0 1px 1px rgba(255, 255, 255, 0.07);
+        }
+        
+        .method-section:last-child .highlight-text {
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Add specific style for acknowledgment section */
+        .method-section .overview-section {
+            background: #1a1a1a !important;  /* Override any existing background styles */
+        }
+
+        /* Remove gradient overlay for acknowledgment */
+        .method-section .overview-section::before {
+            display: none;  /* Remove the gradient overlay */
+        }
+
+        /* Ensure content is visible */
+        .method-section .overview-content {
+            backdrop-filter: none;  /* Remove any backdrop filter */
+        }
+
+        .conference {
+            text-align: center;
+            margin: 20px 0 28px 0;  /* Increased top and bottom margins */
+            font-family: 'Google Sans', sans-serif;
+            font-size: 1.25em;      /* Increased from 1.1em */
+            letter-spacing: 1.2px;   /* Slightly increased letter spacing */
+        }
+
+        .conference span {
+            background: linear-gradient(120deg, #2b5876, #4e4376);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 500;
+            padding: 6px 16px;       /* Slightly increased padding */
+            position: relative;
+        }
+
+        .conference span::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(78, 67, 118, 0.4), transparent);
+        }
+
+        /* Common section styles */
+        .section-container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+            text-align: left;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            color: #ffffff;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .section-text {
+            font-family: 'Raleway', sans-serif;
+            font-size: 16px;
+            line-height: 1.7;
+            color: #cccccc;
+            margin-bottom: 20px;
+            text-align: justify; /* Justify text for a more structured look */
+        }
+
+        .section-text strong {
+            color: #ffffff;
+        }
+
+        .centered-image-container {
+            margin: 30px auto;
+            text-align: center;
+            max-width: 100%; /* Ensure it doesn't overflow */
+        }
+
+        .centered-image-container img {
+            display: block; /* Center non-inline elements */
+            margin: 24px auto; /* Set both top and bottom margin to 24px */
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            max-width: 75%; /* Make images responsive */
+            height: auto;
+
+            /* Start: New styles to shift image slightly left */
+            position: relative;
+            left: 0%; /* Adjust this value to move the image left */
+            /* End: New styles to shift image slightly left */
+        }
+
+        .image-caption {
+            font-family: 'Raleway', sans-serif;
+            font-size: 14px;
+            color: #999999;
+            margin-top: 15px;
+            line-height: 1.5;
+            max-width: 1000px; /* Optional: constrain caption width to match section */
+            margin-left: auto;
+            margin-right: auto;
+            text-align: justify; /* Justify caption text as well */
+        }
+
+         .table-container {
+            overflow-x: auto; /* Allows horizontal scrolling for large tables */
+            margin: 30px auto;
+            max-width: 1000px; /* Adjust as needed, or remove for full width */
+            text-align: center; /* Center the table itself if narrower than container */
+        }
+
+        .table-container table {
+          table-layout: auto;
+          width: auto;
+            border-collapse: collapse; /* Removes space between table cells */
+           margin: 24px auto; /* Centered with consistent spacing */
+            font-family: 'Raleway', sans-serif;
+            font-size: 14px;
+            color: #E0E0E0; /* Main text color, matching page content */
+            background-color: #242424; /* A slightly lighter dark gray for table background */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border-radius: 8px; /* Rounded corners for the table */
+            overflow: hidden; /* Ensures borders/shadows are within rounded corners */
+          max-width: 100%; /* Ensure it doesn't overflow */
+
+        }
+
+        .table-container th, .table-container td {
+            border: 1px solid #444444; /* Darker borders */
+            padding: 12px 15px;
+            text-align: center; /* Centered text */
+            vertical-align: middle; /* Vertically centered text */
+             word-wrap: break-word; /* Ensure long words break */
+            white-space: normal; /* Override no-wrap if necessary */
+        }
+
+        .table-container th {
+            background-color: #2E2E2E; /* Darker header background for emphasis */
+            font-weight: 600;
+            color: #4285F4; /* Accent blue for header text */
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table-container tr:nth-child(even) {
+            background-color: #242424; /* Base dark gray for even rows */
+        }
+
+        .table-container tr:nth-child(odd) {
+            background-color: #2C2C2C; /* Slightly darker shade for odd rows */
+        }
+
+        .table-container tr:hover {
+            background-color: #383838; /* Highlight row on hover */
+             cursor: pointer;
+            transition: background-color 0.3s ease; /* Hover animation */
+        }
+
+        .table-caption {
+            font-family: 'Raleway', sans-serif;
+            font-size: 14px;
+            color: #A0A0A0; /* Muted light gray for caption */
+            margin-top: 15px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            text-align: justify; /* Justify caption text */
+        }
+    </style>
+    <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
+    <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">
+                <img src="images/logo.png" alt="AutoPage Logo">
+                <span>AutoPage</span>
+            </div>
+            <div class="nav-links">
+                <a href="#introduction">Introduction</a>
+                <a href="#autopage-methodology">Methodology</a>
+                <a href="#pagebench-benchmark">Benchmark</a>
+                <a href="#experimental-results">Results</a>
+                <a href="#user-study">User Study</a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="main-content">
+        <div class="main-title">
+            <img src="images/logo.png" alt="AutoPage Logo" class="main-logo">
+            <h1>AutoPage</h1>
+        </div>
+        <h2>Human-Agent Collaborative Paper-to-Page Crafting for Under $0.1</h2>
+        
+        <p class="authors">
+            Anonymous ACL submission
+        </p>
+
+        <div class="affiliations">
+            <p></p>
+        </div>
+
+        
+
+        <div class="section-container" id="introduction">
+            <h2 class="section-title">Introduction</h2>
+            <p class="section-text">In the pursuit of scientific progress, effectively communicating research is as crucial as the discovery itself. However, researchers are often burdened by the manual and repetitive task of creating project webpages to make their complex papers accessible. While automation has addressed static formats like slides and posters, the dynamic and interactive nature of webpages has remained an open challenge. To bridge this gap, we introduce <b>AutoPage</b>, a novel multi-agent system based on a collaborative, hierarchical process. AutoPage conceptualizes paper-to-page creation as a coarse-to-fine pipeline, spanning narrative planning, multimodal content generation, and interactive rendering. To counteract AI hallucination, dedicated 'Checker' agents verify each step against the source paper, and optional human checkpoints allow for feedback, transforming AutoPage into a powerful collaborative assistant. We also present <b>PageBench</b>, the first benchmark for this new task, which has rigorously validated our approach. AutoPage not only generates high-quality, visually appealing pages but does so efficiently, in under 15 minutes and for less than $0.1. </p>
+            <div class="centered-image-container">
+            <!-- width = 1202, height = 553 -->
+            <img src="assets/ACL26_PageAgent-picture-1.png" alt="Overview of our work. (a) End-to-end LLMs directly convert papers into project pages, resulting in unreasonable layouts and lacking human feedback. (b) Our proposed AutoPage integrates human-agent collaboration into automated page generation with higher content and visual quality. The figure also illustrates the process for constructing the PageBench benchmark. (1) illustrates that traditional end-to-end LLM approaches often lead to unreasonable layouts and lack human feedback, whereas our AutoPage system integrates human-agent collaboration to achieve higher content and visual quality." style="max-width: 75%; object-fit: contain;" />
+            <p class="image-caption">Overview of our work. (a) End-to-end LLMs directly convert papers into project pages, resulting in unreasonable layouts and lacking human feedback. (b) Our proposed AutoPage integrates human-agent collaboration into automated page generation with higher content and visual quality. The figure also illustrates the process for constructing the PageBench benchmark. (1) illustrates that traditional end-to-end LLM approaches often lead to unreasonable layouts and lack human feedback, whereas our AutoPage system integrates human-agent collaboration to achieve higher content and visual quality.</p>
+            </div>
+        </div>
+
+        <div class="section-container" id="autopage-methodology">
+            <h2 class="section-title">AutoPage Methodology</h2>
+            <p class="section-text">AutoPage is a multi-agent system designed to transform academic papers into interactive webpages through a coarse-to-fine, collaborative framework. As shown in Figure 2, its pipeline is structured into three main phases: Narrative Planning, Multimodal Content Generation, and Interactive Page Rendering. Throughout these phases, AutoPage employs two core principles: a verification mechanism at the conclusion of each stage to ensure factual grounding and optional human-in-the-loop checkpoints for flexible collaboration. </p>
+            <p class="section-text"><b>1. Narrative Planning and Structuring:</b> This initial phase converts the PDF paper into a structured narrative blueprint. The Paper Content Parser ingests the document, converting it into a clean, JSON-like Markdown format using tools like MinerU and Docling. This creates an asset library containing text-based section summaries and visual representations (figures and tables with captions). The Page Content Planner then architects the webpage's high-level structure, devising a compelling narrative flow optimized for web presentation rather than a direct one-to-one mapping of the paper's original sections. This foundational blueprint undergoes a verification step to ensure completeness and logical soundness.</p>
+            <p class="section-text"><b>2. Multimodal Content Generation:</b> Once the narrative blueprint is finalized, the Page Content Generator populates it with rich, multimodal content using a 'text-first' principle. The Text Content Generator synthesizes key information from the asset library into polished, human-readable paragraphs for each section. Subsequently, the Visual Content Generator analyzes this finalized prose to select and render the most relevant figures or tables, ensuring visual elements directly support the narrative. A two-stage verification and refinement process follows: an automated Content Checker verifies consistency between text and visuals, and optional Human-in-the-Loop Refinement allows authors to provide feedback for iterative content refinement.</p>
+            <p class="section-text"><b>3. Interactive Page Rendering:</b> With author-approved content modules, the system renders them into a polished, interactive webpage. The Page Template Matcher allows users to select a template based on stylistic preferences (e.g., 'background_color', 'has_navigation') from a curated library. After content integration and interactive feature incorporation, the HTML Generator produces the final HTML, CSS, and JavaScript files. A crucial verification and customization stage includes an automated HTML Checker for layout and visual integrity, followed by optional Human-in-the-Loop mechanisms for authors to fine-tune styles via language commands. While AutoPage can operate autonomously, these interactive functionalities prioritize user control and flexibility, ensuring output aligns with the author's vision.</p>
+            <div class="centered-image-container">
+            <!-- width = 2498, height = 1519 -->
+            <img src="assets/ACL26_PageAgent-picture-2.png" alt="Overview of AutoPage. AutoPage conducts a multi-agent pipeline for transforming academic papers into interactive webpages: (1) Narrative Planning and Structuring parses PDFs into Markdown and generates section-level outlines; (2) Multimodal Content Generation produces coherent text-visual sections; (3) Interactive Page Rendering matches templates, compiles full HTML pages, and performs final layout checks. Throughout all phases, AutoPage integrates verification mechanisms and human-in-the-loop checkpoints for reliable and flexible generation." style="max-width: 75%; object-fit: contain;" />
+            <p class="image-caption">Overview of AutoPage. AutoPage conducts a multi-agent pipeline for transforming academic papers into interactive webpages: (1) Narrative Planning and Structuring parses PDFs into Markdown and generates section-level outlines; (2) Multimodal Content Generation produces coherent text-visual sections; (3) Interactive Page Rendering matches templates, compiles full HTML pages, and performs final layout checks. Throughout all phases, AutoPage integrates verification mechanisms and human-in-the-loop checkpoints for reliable and flexible generation. (2)</p>
+            </div>
+        </div>
+
+        <div class="section-container" id="pagebench-benchmark">
+            <h2 class="section-title">PageBench Benchmark</h2>
+            <p class="section-text">To rigorously evaluate AutoPage and foster future research, we developed <b>PageBench</b>, the first dedicated benchmark dataset for automated paper-to-page generation. </p>
+            <p class="section-text"><b>Dataset Curation:</b> Our dataset is curated from over 1,500 project pages associated with papers from top-tier AI conferences (NeurIPS, ICML, ICLR, 2023-2025). Each entry was meticulously filtered to ensure it constituted a valid project homepage. This benchmark is rich in multimodal content, including text, figures, and interactive demos.</p>
+            <p class="section-text"><b>Test Set and Template Library Construction:</b> We employed a two-stage sampling strategy to ensure diversity. First, we extracted structural and stylistic features from our corpus, applied dimensionality reduction and clustering, and sampled 100 pages to form our primary test set, representing a broad range of page archetypes. Second, we deduplicated this test set to create a curated Template Library of 87 stylistically distinct pages.</p>
+            <p class="section-text"><b>Evaluation Metrics:</b> To comprehensively assess webpage quality, we designed a suite of metrics covering two key dimensions: Content Quality and Visual Quality.</p>
+            <p class="section-text"><b>1. Content Quality:</b></p>
+            <p class="section-text">*   <b>Readability:</b> Measured by Perplexity (PPL) across all textual content, a lower score indicates higher linguistic fluency and coherence.</p>
+            <p class="section-text">*   <b>Semantic Fidelity:</b> Quantifies the semantic correspondence between generated webpage sections and their original paper paragraphs, using cosine similarity of vector embeddings after text alignment. Higher scores mean faithful preservation of meaning.</p>
+            <p class="section-text">*   <b>Compression-Aware Information Accuracy:</b> Evaluated via a question-answering (QA) pipeline. Questions are generated from the source paper, and answers are extracted from the generated webpage. The metric synthesizes answer factual correctness and text compression ratio, rewarding accurate and concise summaries.</p>
+            <p class="section-text"><b>2. Visual Quality (VLM-as-Judge framework):</b> A VLM acts as a strict reviewer, assigning scores on a five-point scale for each dimension.</p>
+            <p class="section-text">*   <b>Visual Content Accuracy:</b> Assesses correct presentation of critical visual elements, focusing on mathematical formula rendering and contextual relevance of images to surrounding text.</p>
+            <p class="section-text">*   <b>Layout and Cohesion:</b> Evaluates structural integrity and visual balance, identifying flaws like disproportionate images or excessive white space to reward coherent and comfortable reading experiences.</p>
+            <p class="section-text">*   <b>Aesthetic Score:</b> Quantifies holistic visual appeal based on design harmony, color scheme coherence, style consistency, and clarity of the visual hierarchy, reflecting overall impression and professional polish.</p>
+        </div>
+
+        <div class="section-container" id="experimental-results">
+            <h2 class="section-title">Experimental Results</h2>
+            <p class="section-text">My experiments demonstrate that AutoPage significantly enhances the quality of academic project pages, both in content and visual presentation, consistently outperforming end-to-end methods. As shown in Table 1, integrating AutoPage consistently boosts both content and visual quality metrics across various base models, validating its effectiveness in producing accurate, coherent, and visually refined webpages. For instance, AutoPage-GPT4o-mini significantly improved the Aesthetic Score from 2.71 to 2.95 and Layout and Cohesion from 2.08 to 2.38 compared to the baseline GPT4o-mini. Similarly, AutoPage-Gemini-2.5-Flash achieved higher Semantic Fidelity (0.742 vs. 0.684) and Visual Content Accuracy (3.13 vs. 2.82), alongside a notable improvement in Compression-Aware Information Accuracy (1.276 to 1.941).</p>
+            <div class="centered-image-container">
+            <!-- width = 1184, height = 929 -->
+            <img src="assets/ACL26_PageAgent-picture-3.png" alt="Comprehensive Evaluation of Model Performance with and without AutoPage. The radar plot shows that integrating AutoPage consistently boosts both content and visual quality, thereby demonstrating its strong advantage in generating more accurate, coherent, and visually appealing webpages." style="max-width: 75%; object-fit: contain;" />
+            <p class="image-caption">Comprehensive Evaluation of Model Performance with and without AutoPage. The radar plot shows that integrating AutoPage consistently boosts both content and visual quality, thereby demonstrating its strong advantage in generating more accurate, coherent, and visually appealing webpages. (3) further illustrates this comprehensive improvement, demonstrating that AutoPage consistently boosts both content and visual quality, showcasing its strong advantage.</p>
+            </div>
+            <p class="section-text" style="padding-top: 15px;">An interesting finding is AutoPage's ability to narrow the performance gap across different backbone models. While there was a significant initial gap between strong (e.g., Gemini-2.5-Flash) and weaker (e.g., Qwen) models, AutoPage transformed the weaker backbones to a competitive state. For example, AutoPage boosted Qwen's Visual Content Accuracy by 0.49 points, a substantially larger gain than the 0.31 points seen for Gemini-2.5-Flash, effectively halving the initial performance disparity. This indicates AutoPage is a transformative component, not just an incremental add-on.</p>
+            <p class="section-text">Beyond content fidelity, AutoPage excels as a 'visual architect.' For the Qwen model, while securing a respectable 16% gain in Semantic Fidelity (from 0.571 to 0.663), it delivered a powerful leap in visual metrics, with Visual Content Accuracy soaring by nearly 20% (from 2.52 to 3.01). This mastery of the visual dimension is not just a quantitative improvement but translates directly into a superior user experience, as confirmed by our user study.</p>
+            <div class="table-container">
+            <table>
+            <caption style="caption-side: bottom; text-align: justify;" class="table-caption">Main evaluation results across our full suite of PageBench. The best performance among all methods for each metric is in bold , and the second best is underlined. For ease of comparison, AutoPage and its corresponding proprietary base models are highlighted in matching colors. AutoPage improves both content and visual quality over different base models, validating its effectiveness in producing accurate, coherent, and visually refined webpages. (1)</caption>
+            <thead>
+                <tr>
+                    <th>Methods</th>
+                    <th colspan="4">Content Quality</th>
+                    <th colspan="3">Visual Quality</th>
+                </tr>
+                <tr>
+                    <th></th>
+                    <th>PPL $\downarrow$</th>
+                    <th>Semantic Fidelity $\uparrow$</th>
+                    <th>Compression-Aware Accuracy $\uparrow$</th>
+                    <th>Average $\uparrow$</th>
+                    <th>Accuracy $\uparrow$</th>
+                    <th>Layout & Cohesion $\uparrow$</th>
+                    <th>Aesthetic $\uparrow$</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Original Source Paper</td>
+                    <td>8.21</td>
+                    <td>1.000</td>
+                    <td>3.200</td>
+                    <td>N/A</td>
+                    <td>4.00</td>
+                    <td>4.00</td>
+                    <td>4.00</td>
+                </tr>
+                <tr>
+                    <td colspan="8"><b>End-to-End Solutions</b></td>
+                </tr>
+                <tr>
+                    <td>GPT4o-mini</td>
+                    <td>10.047</td>
+                    <td>0.554</td>
+                    <td>1.023</td>
+                    <td>0.292</td>
+                    <td>2.67</td>
+                    <td>2.08</td>
+                    <td>2.71</td>
+                </tr>
+                <tr>
+                    <td>Qwen</td>
+                    <td>12.871</td>
+                    <td>0.571</td>
+                    <td>1.087</td>
+                    <td>0.301</td>
+                    <td>2.52</td>
+                    <td>2.23</td>
+                    <td>2.33</td>
+                </tr>
+                <tr>
+                    <td>Llama-3.1-80B</td>
+                    <td>11.328</td>
+                    <td>0.442</td>
+                    <td>0.985</td>
+                    <td>0.260</td>
+                    <td>2.45</td>
+                    <td>2.10</td>
+                    <td>2.20</td>
+                </tr>
+                <tr>
+                    <td>Grok4-fast</td>
+                    <td>9.876</td>
+                    <td>0.621</td>
+                    <td>1.156</td>
+                    <td>0.329</td>
+                    <td>2.88</td>
+                    <td>2.45</td>
+                    <td>2.89</td>
+                </tr>
+                <tr>
+                    <td>Gemini-2.5-Flash</td>
+                    <td>9.923</td>
+                    <td>0.684</td>
+                    <td>1.276</td>
+                    <td>0.366</td>
+                    <td>2.82</td>
+                    <td>2.41</td>
+                    <td>2.93</td>
+                </tr>
+                <tr>
+                    <td colspan="8"><b>Multi-Agent Solutions (AutoPage)</b></td>
+                </tr>
+                <tr>
+                    <td style="color: #6a0dad;">AutoPage-GPT4o-mini</td>
+                    <td><b>8.582</b></td>
+                    <td><u>0.641</u></td>
+                    <td><u>1.201</u></td>
+                    <td><u>0.354</u></td>
+                    <td><u>3.01</u></td>
+                    <td><u>2.38</u></td>
+                    <td><u>2.95</u></td>
+                </tr>
+                <tr>
+                    <td style="color: #008000;">AutoPage-Qwen</td>
+                    <td>8.995</td>
+                    <td>0.663</td>
+                    <td>1.189</td>
+                    <td>0.356</td>
+                    <td>3.01</td>
+                    <td>2.35</td>
+                    <td>2.90</td>
+                </tr>
+                <tr>
+                    <td style="color: #000080;">AutoPage-Llama-3.1-80B</td>
+                    <td>8.874</td>
+                    <td>0.612</td>
+                    <td>1.154</td>
+                    <td>0.329</td>
+                    <td>2.98</td>
+                    <td>2.30</td>
+                    <td>2.85</td>
+                </tr>
+                <tr>
+                    <td style="color: #ff8c00;">AutoPage-Grok4-fast</td>
+                    <td>8.789</td>
+                    <td>0.701</td>
+                    <td>1.298</td>
+                    <td>0.386</td>
+                    <td>3.15</td>
+                    <td>2.55</td>
+                    <td>3.05</td>
+                </tr>
+                <tr>
+                    <td style="color: #0000ff;">AutoPage-Gemini-2.5-Flash</td>
+                    <td><b>8.653</b></td>
+                    <td><b>0.742</b></td>
+                    <td><b>1.941</b></td>
+                    <td><b>0.457</b></td>
+                    <td><b>3.18</b></td>
+                    <td><b>2.62</b></td>
+                    <td><b>3.10</b></td>
+                </tr>
+            </tbody>
+        </table>
+            </div>
+            <p class="section-text" style="padding-top: 15px;">Figure 5 provides a qualitative comparison, highlighting AutoPage's superior generation quality over baselines in four key scenarios: (a) Formula Presentation, where it correctly renders mathematical formulas unlike baselines; (b) Image Layout, organizing images into structured galleries instead of inefficient vertical stacks; (c) Table Presentation, styling components to match the page's theme; and (d) Content Planning, enriching dense text with relevant visualizations, transforming dense text into an engaging and easy-to-digest format. This demonstrates AutoPage's thoughtful design capabilities beyond merely filling a page with content.</p>
+            <div class="centered-image-container">
+            <!-- width = 2484, height = 1506 -->
+            <img src="assets/ACL26_PageAgent-picture-5.png" alt="Qualitative comparison illustrating AutoPage's superior generation quality over baselines. The figure highlights four common scenarios where AutoPage demonstrates superior performance: (a) Formula Presentation; (b) Image Layout; (c) Table Presentation; (d) Content Planning. This qualitative comparison demonstrates AutoPage's ability not just to fill a page with content, but to thoughtfully design it." style="max-width: 75%; object-fit: contain;" />
+            <p class="image-caption">Qualitative comparison illustrating AutoPage's superior generation quality over baselines. The figure highlights four common scenarios where AutoPage demonstrates superior performance: (a) Formula Presentation; (b) Image Layout; (c) Table Presentation; (d) Content Planning. This qualitative comparison demonstrates AutoPage's ability not just to fill a page with content, but to thoughtfully design it. (5)</p>
+            </div>
+        </div>
+
+        <div class="section-container" id="user-study">
+            <h2 class="section-title">User Study and Discussion</h2>
+            <p class="section-text">To assess the human-perceived quality of the generated webpages, we conducted a user study with 20 participants. Using a forced-choice rating mechanism, participants assigned unique scores from 1 (Completely Unusable) to 10 (Perfect) to 8 webpages generated by different models for each source paper, compelling them to create a relative ranking.</p>
+            <p class="section-text">Our user study demonstrated a significant preference for webpages generated by AutoPage. As shown in Figure 4, AutoPage achieved the highest average score of 7.16, establishing a clear performance hierarchy and maintaining a discernible advantage over other strong models like Grok4-fast (6.93) and Gemini-2.5-Flash (6.79). The substantial gap between AutoPage and lower-scoring models (e.g., GPT4o-mini at 3.97) underscores the task's difficulty and validates AutoPage's superior ability to align with human expectations.</p>
+            <div class="centered-image-container">
+            <!-- width = 1170, height = 684 -->
+            <img src="assets/ACL26_PageAgent-picture-4.png" alt="Human preference study. The bar chart shows that AutoPage attains the highest user preference score, surpassing all baselines with more informative, coherent, and visually engaging webpages." style="max-width: 75%; object-fit: contain;" />
+            <p class="image-caption">Human preference study. The bar chart shows that AutoPage attains the highest user preference score, surpassing all baselines with more informative, coherent, and visually engaging webpages. (4)</p>
+            </div>
+            <p class="section-text" style="padding-top: 15px;"><b>Efficiency and Cost-Effectiveness:</b> A critical aspect of AutoPage is its exceptional efficiency. Generating a complete, high-quality page costs between $0.06 and $0.20, with turnaround times ranging from 4 to 20 minutes depending on the chosen model. This remarkable cost-effectiveness confirms AutoPage as a scalable and economically viable solution.</p>
+            <p class="section-text"><b>Rethinking Readability Scores:</b> While some baselines show good readability scores, our analysis in Table 1 reveals this can be misleading. For instance, GPT-4o-mini achieves a low PPL (10.047) but suffers from poor Semantic Fidelity (0.554). We argue that a low PPL, when coupled with inferior semantic fidelity and accuracy, does not indicate a truly sophisticated generation process, emphasizing the need for holistic evaluation.</p>
+            <p class="section-text"><b>Limitations and Future Work:</b> While AutoPage shows promising results, several limitations guide future exploration: 1) PageBench currently focuses on ML conferences; extending coverage to other venues (ACL, CVPR, KDD) would enhance domain generality. 2) Our prototype relies on commercial API models, incurring costs and limiting reproducibility; future work could incorporate open-source models. 3) While our evaluation covers core aspects, additional user-centric studies are needed to provide a complementary perspective on usability and long-term impact.</p>
+        </div>
+
+        <div class="section-container">
+            <h2 class="section-title">Discussion</h2>
+            <p class="section-text">Efficiency and cost-effectiveness analysis A critical aspect of AutoPage is its exceptional efficiency in time and cost. Our experiments show that generating a complete, high-quality page costs between just $0.06 and $0.20, with turnaround times ranging from 4 to 20 minutes depending on the chosen model. This demonstrates a clear and valuable trade-off, allowing users to balance their specific needs for speed versus budget. This remarkable cost-effectiveness confirms that AutoPage is not merely a proof-of-concept, but a scalable and economically viable solution ready for real-world deployment.</p>
+            <p class="section-text">Rethinking the readability Scores. While some baselines appear to excel in readability scores, our analysis of Tab. 1 reveals this can be a misleading indicator of true generation quality, often masking significant flaws. We observe the primary failure modes: sacrificing accuracy for fluency, as seen with GPT-4o-mini, which pairs a low PPL (10.047) with poor Semantic Fidelity (0.554), just better than llama-3.1-80B (0.442). We argue that a lower PPL, when coupled with inferior performance in semantic fidelity and accuracy metrics, is not an indicator of a more sophisticated, truly greater generation process, underscoring the need for a holistic evaluation beyond just readability.</p>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const seeDemosButton = document.getElementById('seeDemosButton');
+            const videoSection = document.getElementById('video-section');
+            const videos = document.querySelectorAll('.video-item video');
+            const filterButtons = document.querySelectorAll('.filter-button');
+            const subFilterContainer = document.querySelector('.sub-filter-container');
+            const subFilterButtons = document.querySelectorAll('.sub-filter-button');
+            const videoItems = document.querySelectorAll('.video-item');
+            const consentCheckbox = document.getElementById('consentCheckbox');
+            const proceedButton = document.getElementById('proceedButton');
+
+            // Update the click handler for the See Demos button
+            if (seeDemosButton) { // Check if the button actually exists
+                seeDemosButton.addEventListener('click', function() {
+                    if (videoSection.classList.contains('unlocked')) {
+                        // If content is already shown, hide it
+                        videoSection.classList.remove('unlocked');
+                        seeDemosButton.textContent = 'See Demos';
+                    } else {
+                        // If content is hidden, show the consent modal
+                        const modal = document.getElementById('customModal');
+                        modal.style.display = 'block';
+                    }
+                });
+            }
+
+
+            // Handle modal buttons
+            document.querySelector('.cancel-btn').addEventListener('click', function() {
+                document.getElementById('customModal').style.display = 'none';
+            });
+
+            // Update the confirm button click handler
+            document.querySelector('.confirm-btn').addEventListener('click', function() {
+                document.getElementById('customModal').style.display = 'none';
+                document.getElementById('video-section').classList.add('unlocked');
+                seeDemosButton.textContent = 'Hide Demos'; // Change button text
+                
+                const allButton = document.querySelector('.filter-button[data-filter="all"]');
+                if (allButton) {
+                    allButton.click();
+                    setTimeout(() => {
+                        allButton.click();
+                    }, 500);
+                    setTimeout(() => {
+                        allButton.click();
+                    }, 1000);
+                }
+                
+                // Force Masonry layout refresh
+                const msnry = new Masonry('.video-grid', {
+                    itemSelector: '.video-item',
+                    columnWidth: '.grid-sizer',
+                    percentPosition: true,
+                    gutter: 20
+                });
+                
+                msnry.layout();
+                setTimeout(() => {
+                    msnry.layout();
+                }, 150);
+
+                // Play all videos when unlocked
+                videos.forEach(video => {
+                    video.play().catch(error => console.log('Playback prevented:', error));
+                });
+            });
+
+            // Close modal if clicking outside
+            window.addEventListener('click', function(event) {
+                const modal = document.getElementById('customModal');
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // Initialize Masonry with proper settings
+            const msnry = new Masonry('.video-grid', {
+                itemSelector: '.video-item',
+                columnWidth: '.grid-sizer',
+                percentPosition: true,
+                gutter: 20,
+                horizontalOrder: true // This helps maintain order across columns
+            });
+
+            // Update the showGrid function
+            function showGrid(filter) {
+                const items = document.querySelectorAll('.video-item');
+                items.forEach(item => {
+                    if (filter === 'all' || item.classList.contains(filter)) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                
+                // Force layout recalculation
+                msnry.layout();
+            }
+
+            // Filter functionality
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const filter = this.getAttribute('data-filter');
+                    
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+
+                    if (['sexual', 'abuse', 'violence', 'illegal', 'extremism', 'misinformation'].includes(filter)) {
+                        subFilterContainer.classList.add('active');
+                        
+                        // Hide all sub-filter buttons first
+                        document.querySelectorAll('.sub-filter-buttons').forEach(subFilters => {
+                            subFilters.style.display = 'none';
+                        });
+
+                        // Show the appropriate sub-filter buttons
+                        document.querySelector(`.${filter}-sub-filters`).style.display = 'flex';
+
+                        // Reset sub-filter buttons
+                        subFilterButtons.forEach(btn => btn.classList.remove('active'));
+                        const allButton = document.querySelector(`.sub-filter-button[data-filter="${filter}-all"]`);
+                        if (allButton) {
+                            allButton.classList.add('active');
+                        }
+                        
+                        showGrid(filter);
+                    } else {
+                        subFilterContainer.classList.remove('active');
+                        document.querySelectorAll('.sub-filter-buttons').forEach(subFilters => {
+                            subFilters.style.display = 'none';
+                        });
+                        subFilterButtons.forEach(btn => btn.classList.remove('active'));
+                        showGrid(filter);
+                    }
+                });
+            });
+
+            // Sub-filter functionality
+            subFilterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const subFilter = this.getAttribute('data-filter');
+                    const parentCategory = this.closest('.sub-filter-buttons').classList[1].split('-')[0]; // 'sexual' or 'abuse'
+                    
+                    // Remove active class from all sub-filter buttons in this category
+                    this.closest('.sub-filter-buttons').querySelectorAll('.sub-filter-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    if (subFilter.endsWith('-all')) {
+                        // Show all items of the parent category
+                        showGrid(parentCategory);
+                    } else {
+                        // Show only items of the specific subcategory
+                        videoItems.forEach(item => {
+                            item.style.display = item.classList.contains(subFilter) ? 'block' : 'none';
+                        });
+                        msnry.layout();
+                    }
+                });
+            });
+
+            // Function to stream text
+            function streamText(element, text) {
+                let index = 0;
+                element.innerHTML = '';
+                const interval = setInterval(() => {
+                    if (index < text.length) {
+                        element.innerHTML += text[index];
+                        index++;
+                    } else {
+                        clearInterval(interval);
+                    }
+                }, 50); // Adjust speed here
+            }
+
+            // Update hover functionality for video items
+            videoItems.forEach(item => {
+                const video = item.querySelector('video');
+                const description = item.querySelector('.video-caption p:nth-child(1) .streaming-text');
+                const guardrail = item.querySelector('.video-caption p:nth-child(2) .streaming-text');
+                const explanation = item.querySelector('.video-caption p:nth-child(3) .streaming-text');
+
+                item.addEventListener('mouseenter', () => {
+                    if (videoSection.classList.contains('unlocked')) {
+                        video.play().catch(error => console.log('Playback prevented:', error));
+                        
+                        // Stream text for each caption
+                        if (description) streamText(description, description.dataset.text);
+                        if (guardrail) streamText(guardrail, guardrail.dataset.text);
+                        if (explanation) streamText(explanation, explanation.dataset.text);
+                    }
+                });
+            });
+
+            // Keep existing helper function
+            function isElementInViewport(el) {
+                const rect = el.getBoundingClientRect();
+                return (
+                    rect.top >= 0 &&
+                    rect.left >= 0 &&
+                    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+                );
+            }
+
+            // Initial layout
+            showGrid('all');
+
+            // Handle window resize
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    msnry.layout();
+                }, 250);
+            });
+
+            if (consentCheckbox) { // Check if the checkbox exists
+                consentCheckbox.addEventListener('change', function() {
+                    if (proceedButton) { // Check if the button exists
+                        proceedButton.disabled = !this.checked;
+                    }
+                });
+            }
+        });
+
+        function showDatasetAlert() {
+            document.getElementById('datasetModal').style.display = 'block';
+        }
+
+        function showDemoAlert() {
+            document.getElementById('demoModal').style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Close modal if clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+    </script>
+
+
+    <!-- Main Results Section -->
+    <div class="method-section" id="main-results">
+        <div class="centered-title">Main Results</div>
+        
+        
+        <div class="caption" style="margin-bottom: 40px; margin-left: auto; margin-right: auto; text-align: justify;">
+            <div class="left-title" style="font-size: 19px; text-align: center;">Experiment Setup</div>
+            <b>Baselines.</b> Open-source: (1) most recent models specifically designed for guardrail tasks, i.e., LlavaGuard-34B, Holmes-VAD, and LLamaGuard3V-11B. (2) two powerful pre-trained MLLMs, i.e., InternVL2-8B and InternVL2-26B. Closed-source: the most advanced models available: GPT-4o, Gemini-1.5 Pro, and the Azure Video Content Moderation API.
+            <br><br>
+            <b>Datasets.</b> We evaluate and compare these guardrail models on (1) the high-quality test set of <b>SAFEWATCH-BENCH-Real</b> (830) and <b>SAFEWATCH-BENCH-GenAI</b> (590), covering both real-world and generative videos of six safety categories over 30 scenarios (2) Splits of five existing datasets, i.e., LSPD, XD-Violence, UCF, Fake-SV, FVC. (3) Generalizability to new policy categories: three unseen tasks during training, including children's safety, firearms, and road accidents.
+            <br><br>
+            <b>Metrics.</b> (1) <b>Safety grounding</b>, which denotes the ability to identify the correct policy violation in the video. This is measured by the accuracy (averaged per-category and per-split), F1 Score for multi-label prediction, and AUPRC by framing the guardrail task as a binary classification problem. (2) <b>Explanation quality</b>, which denotes the correctness and policy adherence of the guardrail explanations. We consider both GPT-4o as a judge and human evaluators, where we provide them with the video and the ground-truth response, and ask them to provide them to provide a rating ranging from 0 to 10. (3) <b>Inference latency</b>, which is measured by the average time (in seconds) between sending the guardrail request and receiving the response.
+        </div>
+
+        <!-- Overall Performance Figure -->
+        <div class="image-container">
+            <div class="centered-title" style="font-size: 19px;">Overall Performance Comparison</div>
+            <div class="table-container">
+<table border="1">
+              <caption style="caption-side: bottom; text-align: justify;" class="table-caption">
+                Performance comparison of <b>SafeWatch</b> with various video guardrail baselines on <b>SafeWatch-Bench-Real</b>.
+                We report the individual accuracy for each category, along with average accuracy (ACC) and F1 Score
+                across all categories. AUPRC is calculated over binary guardrail outputs. Explanations are rated on a
+                numerical scale of [0, 10] by both GPT-4o-as-judge and human evaluators. Inference cost is measured by
+                inference time per video. Best performance is in bold.
+              </caption>
+              <thead>
+                <tr>
+                  <th rowspan="3">Methods</th>
+                  <th colspan="8">Accuracy (%)</th>
+                  <th rowspan="3">ACC (%)</th>
+                  <th rowspan="3">F1 Score</th>
+                  <th rowspan="3">AUPRC</th>
+                  <th colspan="2" rowspan="2">Explanations</th>
+                  <th rowspan="3">Inference (s)</th>
+                </tr>
+                <tr>
+                  <th colspan="2">Abuse</th>
+                  <th colspan="2">Sexual</th>
+                  <th colspan="2">Violence</th>
+                  <th rowspan="2">Illegal</th>
+                  <th rowspan="2">Extremism</th>
+                </tr>
+                <tr>
+                  <th>Animal</th>
+                  <th>Child</th>
+                  <th>Hentai</th>
+                  <th>Sexual violence</th>
+                  <th>Fighting</th>
+                  <th>Shooting</th>
+                  <th>GPT-4o</th>
+                  <th>Human</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>LlavaGuard-34B</td>
+                  <td>65.4</td>
+                  <td>60.1</td>
+                  <td>58.8</td>
+                  <td>59.1</td>
+                  <td>61.2</td>
+                  <td>62.5</td>
+                  <td>59.5</td>
+                  <td>60.8</td>
+                  <td>60.9</td>
+                  <td>0.686</td>
+                  <td>0.669</td>
+                  <td>3.5</td>
+                  <td>-</td>
+                  <td>2.8</td>
+                </tr>
+                <tr>
+                  <td>Holmes-VAD</td>
+                  <td>68.9</td>
+                  <td>67.2</td>
+                  <td>65.1</td>
+                  <td>65.5</td>
+                  <td>66.8</td>
+                  <td>68.1</td>
+                  <td>64.8</td>
+                  <td>65.2</td>
+                  <td>66.3</td>
+                  <td>0.741</td>
+                  <td>0.728</td>
+                  <td>4.1</td>
+                  <td>-</td>
+                  <td>2.1</td>
+                </tr>
+                <tr>
+                  <td>LlamaGuard3V-11B</td>
+                  <td>71.8</td>
+                  <td>70.3</td>
+                  <td>68.1</td>
+                  <td>68.5</td>
+                  <td>69.2</td>
+                  <td>70.5</td>
+                  <td>67.5</td>
+                  <td>68.8</td>
+                  <td>69.3</td>
+                  <td>0.778</td>
+                  <td>0.765</td>
+                  <td>4.2</td>
+                  <td>-</td>
+                  <td>1.5</td>
+                </tr>
+                <tr>
+                  <td>InternVL2-8B</td>
+                  <td>78.1</td>
+                  <td>77.2</td>
+                  <td>76.5</td>
+                  <td>76.9</td>
+                  <td>77.8</td>
+                  <td>78.5</td>
+                  <td>76.1</td>
+                  <td>77.1</td>
+                  <td>77.2</td>
+                  <td>0.854</td>
+                  <td>0.835</td>
+                  <td>5.6</td>
+                  <td>5.9</td>
+                  <td>0.7</td>
+                </tr>
+                <tr>
+                  <td>InternVL2-26B</td>
+                  <td>80.5</td>
+                  <td>79.4</td>
+                  <td>79.1</td>
+                  <td>79.5</td>
+                  <td>80.1</td>
+                  <td>80.8</td>
+                  <td>78.9</td>
+                  <td>79.2</td>
+                  <td>79.7</td>
+                  <td>0.887</td>
+                  <td>0.871</td>
+                  <td>6.1</td>
+                  <td>6.4</td>
+                  <td>1.2</td>
+                </tr>
+                <tr>
+                  <td>GPT-4o</td>
+                  <td>84.1</td>
+                  <td>82.6</td>
+                  <td>81.9</td>
+                  <td>82.3</td>
+                  <td>83.5</td>
+                  <td>84.2</td>
+                  <td>81.5</td>
+                  <td>82.8</td>
+                  <td>82.9</td>
+                  <td>0.912</td>
+                  <td>0.899</td>
+                  <td>7.2</td>
+                   <td>7.5</td>
+                  <td>3.5</td>
+                </tr>
+                <tr>
+                  <td>Gemini-1.5 Pro</td>
+                  <td>85.2</td>
+                  <td>84.1</td>
+                  <td>83.5</td>
+                  <td>83.9</td>
+                  <td>84.8</td>
+                  <td>85.1</td>
+                  <td>83.2</td>
+                  <td>84.1</td>
+                  <td>84.2</td>
+                  <td>0.925</td>
+                  <td>0.913</td>
+                  <td>7.6</td>
+                  <td>7.9</td>
+                  <td>4.0</td>
+                </tr>
+                <tr>
+                  <td>Azure (Video Content Moderation)</td>
+                  <td>86.7</td>
+                  <td>85.3</td>
+                  <td>84.9</td>
+                  <td>85.2</td>
+                  <td>86.0</td>
+                  <td>86.1</td>
+                  <td>84.5</td>
+                  <td>85.0</td>
+                  <td>85.5</td>
+                  <td>0.938</td>
+                  <td>0.925</td>
+                  <td>6.9</td>
+                  <td>7.1</td>
+                  <td>1.8</td>
+                </tr>
+                <tr>
+                  <td><b>SafeWatch</b></td>
+                  <td><b>92.1</b></td>
+                  <td><b>91.5</b></td>
+                  <td><b>90.8</b></td>
+                  <td><b>91.2</b></td>
+                  <td><b>91.9</b></td>
+                  <td><b>92.5</b></td>
+                  <td><b>90.5</b></td>
+                  <td><b>91.0</b></td>
+                  <td><b>91.4</b></td>
+                  <td><b>0.978</b></td>
+                  <td><b>0.965</b></td>
+                  <td><b>8.5</b></td>
+                  <td><b>8.8</b></td>
+                  <td><b>0.9</b></td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+        </div>
+
+        <!-- Fine-grained Comparison Figure -->
+        <div class="image-container">
+            <div class="centered-title" style="font-size: 19px;">Fine-grained Comparison between SafeWatch and GPT-4o</div>
+             <div class="table-container">
+<table border="1">
+              <caption style="caption-side: bottom; text-align: justify;" class="table-caption">
+                Comparison of <b>SafeWatch</b> and GPT-4o across fine-grained scenarios in <b>SafeWatch-Bench</b>. We evaluate the average accuracy per subcategory. Hard Benign refers to challenging benign samples that previous models often misclassify as harmful, resulting in high false positives.
+              </caption>
+              <thead>
+                <tr>
+                  <th rowspan="2">Scenarios</th>
+                  <th colspan="2">Accuracy (%)</th>
+                  <th rowspan="2">GPT-4o vs SafeWatch</th>
+                </tr>
+                <tr>
+                  <th>GPT-4o</th>
+                  <th>SafeWatch</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Abuse - Animal - Pets_fighting_illegal</td>
+                  <td>82.1</td>
+                  <td><b>90.5</b></td>
+                  <td>-8.4</td>
+                </tr>
+                <tr>
+                  <td>Abuse - Animal - Wild_animal_mistreatment</td>
+                  <td>83.5</td>
+                  <td><b>91.2</b></td>
+                  <td>-7.7</td>
+                </tr>
+                <tr>
+                  <td>Abuse - Child - Child_labor</td>
+                  <td>81.8</td>
+                  <td><b>90.1</b></td>
+                  <td>-8.3</td>
+                </tr>
+                <tr>
+                  <td>Abuse - Child - Child_neglect_visible_harm</td>
+                  <td>80.2</td>
+                  <td><b>89.5</b></td>
+                  <td>-9.3</td>
+                </tr>
+                <tr>
+                  <td>Sexual - Hentai - Anime_hentai</td>
+                  <td>85.3</td>
+                  <td><b>92.1</b></td>
+                  <td>-6.8</td>
+                </tr>
+                <tr>
+                  <td>Sexual - Sexual_violence - Non_consensual_sexual_acts</td>
+                  <td>84.1</td>
+                  <td><b>91.8</b></td>
+                  <td>-7.7</td>
+                </tr>
+                <tr>
+                  <td>Violence - Fighting - Street_brawl</td>
+                  <td>82.5</td>
+                  <td><b>90.3</b></td>
+                  <td>-7.8</td>
+                </tr>
+                <tr>
+                  <td>Violence - Fighting - Organized_fight</td>
+                  <td>83.9</td>
+                  <td><b>91.6</b></td>
+                  <td>-7.7</td>
+                </tr>
+                <tr>
+                  <td>Violence - Shooting - Mass_shooting</td>
+                  <td>86.7</td>
+                  <td><b>93.2</b></td>
+                  <td>-6.5</td>
+                </tr>
+                <tr>
+                  <td>Violence - Shooting - Targeted_shooting</td>
+                  <td>85.1</td>
+                  <td><b>92.8</b></td>
+                  <td>-7.7</td>
+                </tr>
+                <tr>
+                  <td>Illegal - Robbery - Bank_robbery</td>
+                  <td>80.9</td>
+                  <td><b>89.7</b></td>
+                  <td>-8.8</td>
+                </tr>
+                <tr>
+                  <td>Illegal - Robbery - Store_robbery</td>
+                  <td>81.4</td>
+                  <td><b>89.9</b></td>
+                  <td>-8.5</td>
+                </tr>
+                <tr>
+                  <td>Extremism - Self_harm - Suicide_attempt</td>
+                  <td>83.2</td>
+                  <td><b>90.8</b></td>
+                  <td>-7.6</td>
+                </tr>
+                <tr>
+                  <td>Extremism - Displays_of_extremism - Hate_speech_rally</td>
+                  <td>84.6</td>
+                  <td><b>91.5</b></td>
+                  <td>-6.9</td>
+                </tr>
+                <tr>
+                  <td>Benign - Hard_benign - Safe_contact_sports</td>
+                  <td>55.1</td>
+                  <td><b>88.7</b></td>
+                  <td>-33.6</td>
+                </tr>
+                <tr>
+                  <td>Benign - Hard_benign - Animal_documentary</td>
+                  <td>52.8</td>
+                  <td><b>87.9</b></td>
+                  <td>-35.1</td>
+                </tr>
+                <tr>
+                  <td>Benign - Hard_benign - News_report</td>
+                  <td>58.9</td>
+                  <td><b>89.1</b></td>
+                  <td>-30.2</td>
+                </tr>
+                <tr>
+                  <td>Average Accuracy</td>
+                  <td>78.5</td>
+                  <td><b>90.5</b></td>
+                  <td>-12.0</td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+        </div>
+
+        <!-- Heatmap Figure -->
+        <div class="image-container">
+            <div class="centered-title" style="font-size: 19px;">Fine-grained Comparison of All Models on All Datasets</div>
+            <div class="table-container">
+<table border="1">
+              <caption>
+                Detailed comparison across different guardrail models on the accuracy of each subcategory
+                in <b>SafeWatch-Bench</b>, five existing datasets, i.e., LSPD, XD-V, UCF, FakeSV, FVC, and four new
+                policy categories, i.e., child safety, firearms, accidents.
+              </caption>
+              <thead>
+                <tr>
+                  <th rowspan="4">Policy</th>
+                  <th rowspan="4">Category</th>
+                  <th rowspan="4">Scenario</th>
+                  <th colspan="8">Models</th>
+                </tr>
+                <tr>
+                  <th rowspan="3">LlavaGuard-34B</th>
+                  <th rowspan="3">Holmes-VAD</th>
+                  <th rowspan="3">LlamaGuard3V-11B</th>
+                  <th colspan="2">InternVL2</th>
+                  <th rowspan="3">GPT-4o</th>
+                  <th rowspan="3">Gemini-1.5 Pro</th>
+                  <th rowspan="3">Azure</th>
+                  <th rowspan="3">SafeWatch</th>
+                </tr>
+                <tr>
+                  <th>8B</th>
+                  <th>26B</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td rowspan="17">SafeWatch-Bench</td>
+                  <td rowspan="4">Abuse</td>
+                  <td>Animal - Pets fighting illegal</td>
+                  <td>65.4</td>
+                  <td>68.9</td>
+                  <td>71.8</td>
+                  <td>78.1</td>
+                  <td>80.5</td>
+                  <td>82.1</td>
+                  <td>83.8</td>
+                  <td>86.7</td>
+                  <td><b>92.5</b></td>
+                </tr>
+                <tr>
+                  <td>Animal - Wild animal mistreatment</td>
+                  <td>64.1</td>
+                  <td>67.8</td>
+                  <td>70.5</td>
+                  <td>77.2</td>
+                  <td>79.8</td>
+                  <td>83.5</td>
+                  <td>84.9</td>
+                  <td>87.1</td>
+                  <td><b>91.2</b></td>
+                </tr>
+                <tr>
+                  <td>Child - Child labor</td>
+                  <td>62.8</td>
+                  <td>66.5</td>
+                  <td>69.2</td>
+                  <td>76.5</td>
+                  <td>78.9</td>
+                  <td>81.8</td>
+                  <td>83.2</td>
+                  <td>85.3</td>
+                  <td><b>90.1</b></td>
+                </tr>
+                <tr>
+                  <td>Child - Child neglect visible harm</td>
+                  <td>60.1</td>
+                  <td>63.8</td>
+                  <td>66.5</td>
+                  <td>73.8</td>
+                  <td>76.2</td>
+                  <td>80.2</td>
+                  <td>81.6</td>
+                  <td>83.9</td>
+                  <td><b>89.5</b></td>
+                </tr>
+                <tr>
+                  <td rowspan="2">Sexual</td>
+                  <td>Hentai - Anime hentai</td>
+                  <td>58.8</td>
+                  <td>62.5</td>
+                  <td>65.1</td>
+                  <td>71.8</td>
+                  <td>74.2</td>
+                  <td>85.3</td>
+                  <td>86.7</td>
+                  <td>88.9</td>
+                  <td><b>92.1</b></td>
+                </tr>
+                <tr>
+                  <td>Sexual violence - Non consensual sexual acts</td>
+                  <td>59.1</td>
+                  <td>62.8</td>
+                  <td>65.5</td>
+                  <td>72.1</td>
+                  <td>74.5</td>
+                  <td>84.1</td>
+                  <td>85.5</td>
+                  <td>87.7</td>
+                  <td><b>91.8</b></td>
+                </tr>
+                <tr>
+                  <td rowspan="6">Violence</td>
+                  <td>Fighting - Street brawl</td>
+                  <td>61.2</td>
+                  <td>64.9</td>
+                  <td>67.2</td>
+                  <td>74.5</td>
+                  <td>76.9</td>
+                  <td>82.5</td>
+                  <td>83.9</td>
+                  <td>86.1</td>
+                  <td><b>90.3</b></td>
+                </tr>
+                <tr>
+                  <td>Fighting - Organized fight</td>
+                  <td>62.5</td>
+                  <td>66.2</td>
+                  <td>68.9</td>
+                  <td>75.8</td>
+                  <td>78.2</td>
+                  <td>83.9</td>
+                  <td>85.3</td>
+                  <td>87.5</td>
+                  <td><b>91.6</b></td>
+                </tr>
+                <tr>
+                  <td>Shooting - Mass shooting</td>
+                  <td>64.3</td>
+                  <td>68.0</td>
+                  <td>70.7</td>
+                  <td>77.0</td>
+                  <td>79.4</td>
+                  <td>86.7</td>
+                  <td>88.1</td>
+                  <td>90.3</td>
+                  <td><b>93.2</b></td>
+                </tr>
+                <tr>
+                  <td>Shooting - Targeted shooting</td>
+                  <td>63.5</td>
+                  <td>67.2</td>
+                  <td>69.9</td>
+                  <td>76.2</td>
+                  <td>78.6</td>
+                  <td>85.1</td>
+                  <td>86.5</td>
+                  <td>88.7</td>
+                  <td><b>92.8</b></td>
+                </tr>
+                <tr>
+                  <td>Sexual violence - Rape on campus</td>
+                  <td>60.8</td>
+                  <td>64.5</td>
+                  <td>67.2</td>
+                  <td>74.5</td>
+                  <td>76.9</td>
+                  <td>81.2</td>
+                  <td>82.6</td>
+                  <td>84.8</td>
+                  <td><b>90.2</b></td>
+                </tr>
+                <tr>
+                  <td>Vandalism - Public property destruction</td>
+                  <td>59.5</td>
+                  <td>63.2</td>
+                  <td>65.9</td>
+                  <td>73.2</td>
+                  <td>75.6</td>
+                  <td>80.5</td>
+                  <td>81.9</td>
+                  <td>84.1</td>
+                  <td><b>89.8</b></td>
+                </tr>
+                <tr>
+                  <td rowspan="2">Illegal</td>
+                  <td>Robbery - Bank robbery</td>
+                  <td>59.5</td>
+                  <td>63.2</td>
+                  <td>65.9</td>
+                  <td>73.2</td>
+                  <td>75.6</td>
+                  <td>80.9</td>
+                  <td>82.3</td>
+                  <td>84.5</td>
+                  <td><b>89.7</b></td>
+                </tr>
+                <tr>
+                  <td>Robbery - Store robbery</td>
+                  <td>60.2</td>
+                  <td>63.9</td>
+                  <td>66.6</td>
+                  <td>73.9</td>
+                  <td>76.3</td>
+                  <td>81.4</td>
+                  <td>82.8</td>
+                  <td>85.0</td>
+                  <td><b>89.9</b></td>
+                </tr>
+                <tr>
+                  <td rowspan="3">Extremism</td>
+                  <td>Self harm - Suicide attempt</td>
+                  <td>60.8</td>
+                  <td>64.5</td>
+                  <td>67.2</td>
+                  <td>74.5</td>
+                  <td>76.9</td>
+                  <td>83.2</td>
+                  <td>84.6</td>
+                  <td>86.8</td>
+                  <td><b>90.8</b></td>
+                </tr>
+                <tr>
+                  <td>Disturbing content - Graphic injury</td>
+                  <td>58.5</td>
+                  <td>62.2</td>
+                  <td>64.9</td>
+                  <td>72.2</td>
+                  <td>74.6</td>
+                  <td>80.1</td>
+                  <td>81.5</td>
+                  <td>83.7</td>
+                  <td><b>89.1</b></td>
+                </tr>
+                <tr>
+                  <td>Displays of extremism - Hate speech rally</td>
+                  <td>61.5</td>
+                  <td>65.2</td>
+                  <td>67.9</td>
+                  <td>75.2</td>
+                  <td>77.6</td>
+                  <td>84.6</td>
+                  <td>86.0</td>
+                  <td>88.2</td>
+                  <td><b>91.5</b></td>
+                </tr>
+                <tr>
+                  <td rowspan="5">Existing DataSets</td>
+                  <td colspan="2">LSPD - violence</td>
+                  <td>55.1</td>
+                  <td>59.2</td>
+                  <td>61.8</td>
+                  <td>68.5</td>
+                  <td>70.9</td>
+                  <td>75.3</td>
+                  <td>76.7</td>
+                  <td>78.9</td>
+                  <td><b>85.1</b></td>
+                </tr>
+                <tr>
+                  <td colspan="2">XD-V - violence</td>
+                  <td>53.8</td>
+                  <td>57.9</td>
+                  <td>60.5</td>
+                  <td>67.2</td>
+                  <td>69.6</td>
+                  <td>74.0</td>
+                  <td>75.4</td>
+                  <td>77.6</td>
+                  <td><b>84.5</b></td>
+                </tr>
+                <tr>
+                  <td colspan="2">UCF - violence</td>
+                  <td>56.3</td>
+                  <td>60.4</td>
+                  <td>63.0</td>
+                  <td>69.7</td>
+                  <td>72.1</td>
+                  <td>76.5</td>
+                  <td>77.9</td>
+                  <td>80.1</td>
+                  <td><b>86.9</b></td>
+                </tr>
+                <tr>
+                  <td colspan="2">Fake-SV - deepfake videos</td>
+                  <td>50.1</td>
+                  <td>52.7</td>
+                  <td>55.3</td>
+                  <td>60.1</td>
+                  <td>62.5</td>
+                  <td>65.1</td>
+                  <td>66.5</td>
+                  <td>68.7</td>
+                  <td><b>75.1</b></td>
+                </tr>
+                <tr>
+                  <td colspan="2">FVC - deepfake audio</td>
+                  <td>51.2</td>
+                  <td>53.8</td>
+                  <td>56.5</td>
+                  <td>61.2</td>
+                  <td>63.6</td>
+                  <td>66.2</td>
+                  <td>67.6</td>
+                  <td>69.8</td>
+                  <td><b>76.2</b></td>
+                </tr>
+                <tr>
+                  <td rowspan="3">New Policy Categories</td>
+                  <td colspan="2">Children's safety</td>
+                  <td>54.7</td>
+                  <td>58.9</td>
+                  <td>61.5</td>
+                  <td>68.2</td>
+                  <td>70.6</td>
+                  <td>75.0</td>
+                  <td>76.4</td>
+                  <td>78.6</td>
+                  <td><b>84.9</b></td>
+                </tr>
+                <tr>
+                  <td colspan="2">Firearms</td>
+                  <td>57.3</td>
+                  <td>61.5</td>
+                  <td>64.1</td>
+                  <td>70.8</td>
+                  <td>73.2</td>
+                  <td>77.6</td>
+                  <td>79.0</td>
+                  <td>81.2</td>
+                  <td><b>87.1</b></td>
+                </tr>
+                <tr>
+                  <td colspan="2">Road accidents</td>
+                  <td>52.9</td>
+                  <td>57.0</td>
+                  <td>59.6</td>
+                  <td>66.3</td>
+                  <td>68.7</td>
+                  <td>73.1</td>
+                  <td>74.5</td>
+                  <td>76.7</td>
+                  <td><b>83.5</b></td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Add BibTeX section -->
+    <div class="bibtex-section" style="width: 100%; max-width: 1100px; margin: 40px auto; padding: 2px; background: rgba(0, 0, 0, 0.2); border-radius: 10px;">
+        <h2 style="font-family: 'Orbitron', sans-serif; color: #ffffff; margin-bottom: 20px; text-align: center;">BibTeX</h2>
+        <pre style="background: #2a2a2a; padding: 20px; border-radius: 8px; overflow-x: auto; color: #ffffff; font-family: 'Roboto Mono', monospace; font-size: 14px; line-height: 1.5;"><code>@article{chen2024safewatch,
+            title={Safewatch: An efficient safety-policy following video guardrail model with transparent explanations},
+            author={Chen, Zhaorun and Pinto, Francesco and Pan, Minzhou and Li, Bo},
+            journal={arXiv preprint arXiv:2412.06878},
+            year={2024}
+          }</code></pre>
+    </div>
+
+        <!-- Add visitor statistics with container and styling -->
+    <!-- <div class="visitor-stats-container">
+        <button class="stats-toggle-btn" onclick="toggleStats()">
+            <span class="stats-icon">📊</span>
+            <span class="stats-text">View Statistics</span>
+            <span class="chevron">▼</span>
+        </button>
+        <div class="stats-content">
+            <div id="clustrmaps-widget" style="padding: 20px; background: #2a2a2a; border-radius: 8px;">
+                <img 
+                    src='https://clustrmaps.com/map_v2.png?cl=ffffff&w=a&t=n&d=p6k1f4UwHW-LOZNWxVQi5XI2s03Q4BzAFfbVsau9n8s'
+                    alt="Visitor Map"
+                    style="max-width: 100%; height: auto;"
+                />
+            </div>
+        </div>
+    </div> -->
+
+
+    <script>
+        function toggleStats() {
+            const content = document.querySelector('.stats-content');
+            const button = document.querySelector('.stats-toggle-btn');
+            content.classList.toggle('expanded');
+            button.classList.toggle('expanded');
+        }
+    </script>
+
+    <script>
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                // Add smooth scrolling with offset for header
+                const headerOffset = 80; // Adjust this value based on your header height
+                const elementPosition = section.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: "smooth"
+                });
+            }
+        }
+    </script>
+
+    <script>
+        function scrollToSeeDemos(event) {
+            event.preventDefault();
+            const demoSection = document.getElementById('video-demos');
+            if (demoSection) {
+                const headerOffset = 80;
+                const elementPosition = demoSection.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: "smooth"
+                });
+            }
+        </script>
+
+
+    <!-- Update just the script part that controls the button animation -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const demoButton = document.getElementById('seeDemosButton');
+            
+            // Add animation class on page load
+            if (demoButton) {
+                demoButton.style.animation = 'buttonPulse 2s 1.5';
+                
+                // Remove animation after 3 seconds
+                setTimeout(() => {
+                    demoButton.style.animation = 'none';
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>

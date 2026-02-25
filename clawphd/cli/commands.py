@@ -286,7 +286,7 @@ def gateway(
 
 
 def _build_diagram_providers(config):
-    """Auto-detect and build PaperBanana diagram providers.
+    """Build PaperBanana diagram providers using OpenRouter.
 
     Returns (vlm_provider, image_gen_provider, reference_store).
     Any or all may be ``None`` when the required keys are absent.
@@ -294,13 +294,11 @@ def _build_diagram_providers(config):
     import os
     from pathlib import Path
 
-    google_key = (
-        config.providers.gemini.api_key
-        or os.environ.get("GOOGLE_API_KEY")
+    openrouter_key = (
+        config.providers.openrouter.api_key
+        or os.environ.get("OPENROUTER_API_KEY")
     )
-    replicate_token = os.environ.get("REPLICATE_API_TOKEN")
-
-    if not google_key and not replicate_token:
+    if not openrouter_key:
         return None, None, None
 
     vlm = None
@@ -309,26 +307,30 @@ def _build_diagram_providers(config):
 
     try:
         from clawphd.agent.tools.paperbanana_providers import (
-            GeminiVLM,
-            GeminiImageGen,
-            ReplicateVLM,
-            ReplicateImageGen,
+            OpenRouterVLM,
+            OpenRouterImageGen,
             ReferenceStore,
         )
     except Exception:
         return None, None, None
 
-    # VLM provider (prefer Replicate if available, else Gemini)
-    if replicate_token:
-        vlm = ReplicateVLM(api_token=replicate_token)
-    elif google_key:
-        vlm = GeminiVLM(api_key=google_key)
+    openrouter_base = config.providers.openrouter.api_base or "https://openrouter.ai/api/v1"
+    vlm_model = os.environ.get("OPENROUTER_VLM_MODEL", "openai/gpt-4.1-mini")
+    image_model = os.environ.get(
+        "OPENROUTER_IMAGE_MODEL",
+        "google/gemini-3-pro-image-preview",
+    )
 
-    # Image-gen provider (prefer Replicate if available, else Gemini)
-    if replicate_token:
-        image_gen = ReplicateImageGen(api_token=replicate_token)
-    elif google_key:
-        image_gen = GeminiImageGen(api_key=google_key)
+    vlm = OpenRouterVLM(
+        api_key=openrouter_key,
+        model=vlm_model,
+        api_base=openrouter_base,
+    )
+    image_gen = OpenRouterImageGen(
+        api_key=openrouter_key,
+        model=image_model,
+        api_base=openrouter_base,
+    )
 
     # Reference store (optional – look in the repo's paperbanana/data/)
     for candidate in [

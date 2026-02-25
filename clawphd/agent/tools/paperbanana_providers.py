@@ -5,11 +5,12 @@ These are self-contained — no dependency on the ``paperbanana`` package.
 All classes are duck-typed to match what the tools in
 ``clawphd.agent.tools.paperbanana`` expect:
 
-* **GeminiVLM**          → ``async generate(prompt, …) -> str``
-* **ReplicateVLM**       → ``async generate(prompt, …) -> str``
-* **GeminiImageGen**     → ``async generate(prompt, …) -> PIL.Image``
-* **ReplicateImageGen**  → ``async generate(prompt, …) -> PIL.Image``
+* **OpenRouterVLM**      → ``async generate(prompt, …) -> str``
+* **OpenRouterImageGen** → ``async generate(prompt, …) -> PIL.Image``
 * **ReferenceStore**     → ``get_all() -> list[ReferenceExample]``
+
+Legacy Gemini/Replicate providers are kept for compatibility, but runtime
+initialization now prefers OpenRouter.
 """
 
 from __future__ import annotations
@@ -112,6 +113,185 @@ class ReferenceStore:
             )
         logger.info(f"Loaded {len(self._examples)} reference examples")
         self._loaded = True
+
+
+# ---------------------------------------------------------------------------
+# OpenRouterVLM  (text / vision-language generation)
+# ---------------------------------------------------------------------------
+
+class OpenRouterVLM:
+    """OpenRouter-based VLM provider for text generation and image understanding."""
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "openai/gpt-4.1-mini",
+        api_base: str = "https://openrouter.ai/api/v1",
+    ):
+        self._api_key = api_key
+        self._model = model
+        self._api_base = api_base.rstrip("/")
+
+    async def generate(
+        self,
+        prompt: str,
+        images: list[Any] | None = None,
+        system_prompt: str | None = None,
+        temperature: float = 1.0,
+        max_tokens: int = 4096,
+        response_format: str | None = None,
+        **kwargs: Any,
+    ) -> str:
+        import httpx
+
+        user_content: list[dict[str, Any]] = []
+        if images:
+            for img in images:
+                b64 = _image_to_base64(img, fmt="JPEG", max_dim=1024)
+                user_content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+                    }
+                )
+        user_content.append({"type": "text", "text": prompt})
+
+        messages: list[dict[str, Any]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": user_content})
+
+        payload: dict[str, Any] = {
+            "model": self._model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        if response_format == "json":
+            payload["response_format"] = {"type": "json_object"}
+
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+        async with httpx.AsyncClient(timeout=120) as client:
+            response = await client.post(
+                f"{self._api_base}/chat/completions",
+                headers=headers,
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return (data["choices"][0]["message"].get("content") or "").strip()
+
+
+# ---------------------------------------------------------------------------
+# OpenRouterImageGen  (text → image)
+# ---------------------------------------------------------------------------
+
+class OpenRouterImageGen:
+    """Image generation via OpenRouter chat/completions with modalities.
+
+    OpenRouter does not expose an ``/images/generations`` endpoint.
+    Image generation is requested through ``/chat/completions`` by setting
+    ``modalities`` to ``["image"]`` (or ``["image", "text"]`` for models that
+    also return text).  Generated images are returned as base64 data-URIs in
+    ``choices[0].message.images[*].image_url.url``.
+
+    Args:
+        api_key: OpenRouter API key.
+        model: An OpenRouter model that supports image output, e.g.
+            ``"google/gemini-3-pro-image-preview"`` or ``"black-forest-labs/flux-1.1-pro"``.
+        api_base: OpenRouter API base URL.
+        modalities: Modalities list passed to the API.  Use ``["image"]``
+            for image-only models and ``["image", "text"]`` for models that
+            can return both.
+    """
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "google/gemini-3-pro-image-preview",
+        api_base: str = "https://openrouter.ai/api/v1",
+        modalities: list[str] | None = None,
+    ):
+        self._api_key = api_key
+        self._model = model
+        self._api_base = api_base.rstrip("/")
+        self._modalities = modalities or ["image", "text"]
+
+    async def generate(
+        self,
+        prompt: str,
+        negative_prompt: str | None = None,
+        width: int = 1024,
+        height: int = 1024,
+        seed: int | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Generate a PIL Image via OpenRouter chat/completions."""
+        import httpx
+        from PIL import Image
+
+        if negative_prompt:
+            prompt = f"{prompt}\n\nAvoid: {negative_prompt}"
+
+        payload: dict[str, Any] = {
+            "model": self._model,
+            "messages": [{"role": "user", "content": prompt}],
+            "modalities": self._modalities,
+        }
+        if seed is not None:
+            payload["seed"] = seed
+
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+
+        logger.info(
+            "Calling OpenRouter image generation via chat/completions",
+            model=self._model,
+            prompt_len=len(prompt),
+        )
+
+        async with httpx.AsyncClient(timeout=180) as client:
+            response = await client.post(
+                f"{self._api_base}/chat/completions",
+                headers=headers,
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        message = (data.get("choices") or [{}])[0].get("message", {})
+
+        # Images are returned as a list of {image_url: {url: "data:image/..."}} objects
+        images_field = message.get("images") or []
+        for img_item in images_field:
+            url = (img_item.get("image_url") or {}).get("url", "")
+            if url.startswith("data:"):
+                # data:<mime>;base64,<b64data>
+                _, b64part = url.split(",", 1)
+                return Image.open(BytesIO(base64.b64decode(b64part)))
+            if url:
+                async with httpx.AsyncClient(timeout=60) as dl:
+                    img_resp = await dl.get(url)
+                    img_resp.raise_for_status()
+                    return Image.open(BytesIO(img_resp.content))
+
+        # Fallback: some models embed the image as a data-URI in content
+        content = message.get("content") or ""
+        if "data:image" in content:
+            idx = content.index("data:image")
+            data_uri = content[idx:].split()[0].rstrip(")")
+            _, b64part = data_uri.split(",", 1)
+            return Image.open(BytesIO(base64.b64decode(b64part)))
+
+        raise ValueError(
+            f"OpenRouter image response did not contain image data. "
+            f"Message keys: {list(message.keys())}"
+        )
 
 
 # ---------------------------------------------------------------------------

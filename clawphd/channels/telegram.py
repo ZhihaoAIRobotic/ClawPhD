@@ -152,31 +152,60 @@ class TelegramChannel(BaseChannel):
             self._app = None
     
     async def send(self, msg: OutboundMessage) -> None:
-        """Send a message through Telegram."""
+        """Send a message through Telegram, including any generated images."""
         if not self._app:
             logger.warning("Telegram bot not running")
             return
-        
+
         try:
-            # chat_id should be the Telegram chat ID (integer)
             chat_id = int(msg.chat_id)
-            # Convert markdown to Telegram HTML
-            html_content = _markdown_to_telegram_html(msg.content)
+        except ValueError:
+            logger.error(f"Invalid chat_id: {msg.chat_id}")
+            return
+
+        # Collect local image paths from msg.media
+        image_paths = [
+            p for p in (msg.media or [])
+            if p.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp"))
+        ]
+
+        # Send images first; use the text content as caption on the first image
+        if image_paths:
+            html_caption = _markdown_to_telegram_html(msg.content) if msg.content else ""
+            for i, img_path in enumerate(image_paths):
+                try:
+                    caption = html_caption if i == 0 else None
+                    with open(img_path, "rb") as f:
+                        await self._app.bot.send_photo(
+                            chat_id=chat_id,
+                            photo=f,
+                            caption=caption,
+                            parse_mode="HTML" if caption else None,
+                        )
+                    logger.debug(f"Sent image to Telegram {chat_id}: {img_path}")
+                except Exception as e:
+                    logger.error(f"Failed to send image {img_path}: {e}")
+                    # Fall through to send the text separately below
+                    if i == 0:
+                        await self._send_text(chat_id, msg.content)
+            return
+
+        # No images — send text only
+        await self._send_text(chat_id, msg.content)
+
+    async def _send_text(self, chat_id: int, content: str) -> None:
+        """Send a plain/HTML text message, falling back to plain text on parse error."""
+        try:
+            html_content = _markdown_to_telegram_html(content)
             await self._app.bot.send_message(
                 chat_id=chat_id,
                 text=html_content,
-                parse_mode="HTML"
+                parse_mode="HTML",
             )
-        except ValueError:
-            logger.error(f"Invalid chat_id: {msg.chat_id}")
         except Exception as e:
-            # Fallback to plain text if HTML parsing fails
             logger.warning(f"HTML parse failed, falling back to plain text: {e}")
             try:
-                await self._app.bot.send_message(
-                    chat_id=int(msg.chat_id),
-                    text=msg.content
-                )
+                await self._app.bot.send_message(chat_id=chat_id, text=content)
             except Exception as e2:
                 logger.error(f"Error sending Telegram message: {e2}")
     

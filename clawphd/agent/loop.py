@@ -2,8 +2,23 @@
 
 import asyncio
 import json
+import re
 from pathlib import Path
 from typing import Any
+
+_IMAGE_PATH_RE = re.compile(
+    r'(/[^\s\'"]+\.(?:png|jpg|jpeg|gif|webp))', re.IGNORECASE
+)
+
+
+def _extract_image_paths(text: str) -> list[str]:
+    """Extract existing local image file paths from a tool result string."""
+    paths: list[str] = []
+    for m in _IMAGE_PATH_RE.finditer(text):
+        p = Path(m.group(1))
+        if p.exists() and p.is_file():
+            paths.append(str(p))
+    return paths
 
 from loguru import logger
 
@@ -245,7 +260,8 @@ class AgentLoop:
         # Agent loop
         iteration = 0
         final_content = None
-        
+        generated_media: list[str] = []
+
         while iteration < self.max_iterations:
             iteration += 1
             
@@ -279,6 +295,10 @@ class AgentLoop:
                     args_str = json.dumps(tool_call.arguments)
                     logger.debug(f"Executing tool: {tool_call.name} with arguments: {args_str}")
                     result = await self.tools.execute(tool_call.name, tool_call.arguments)
+                    # Collect any image files produced by tools (e.g. generate_image)
+                    for img_path in _extract_image_paths(str(result)):
+                        if img_path not in generated_media:
+                            generated_media.append(img_path)
                     messages = self.context.add_tool_result(
                         messages, tool_call.id, tool_call.name, result
                     )
@@ -298,7 +318,8 @@ class AgentLoop:
         return OutboundMessage(
             channel=msg.channel,
             chat_id=msg.chat_id,
-            content=final_content
+            content=final_content,
+            media=generated_media,
         )
     
     async def _process_system_message(self, msg: InboundMessage) -> OutboundMessage | None:
@@ -348,7 +369,8 @@ class AgentLoop:
         # Agent loop (limited for announce handling)
         iteration = 0
         final_content = None
-        
+        generated_media: list[str] = []
+
         while iteration < self.max_iterations:
             iteration += 1
             
@@ -378,6 +400,9 @@ class AgentLoop:
                     args_str = json.dumps(tool_call.arguments)
                     logger.debug(f"Executing tool: {tool_call.name} with arguments: {args_str}")
                     result = await self.tools.execute(tool_call.name, tool_call.arguments)
+                    for img_path in _extract_image_paths(str(result)):
+                        if img_path not in generated_media:
+                            generated_media.append(img_path)
                     messages = self.context.add_tool_result(
                         messages, tool_call.id, tool_call.name, result
                     )
@@ -396,7 +421,8 @@ class AgentLoop:
         return OutboundMessage(
             channel=origin_channel,
             chat_id=origin_chat_id,
-            content=final_content
+            content=final_content,
+            media=generated_media,
         )
     
     async def process_direct(

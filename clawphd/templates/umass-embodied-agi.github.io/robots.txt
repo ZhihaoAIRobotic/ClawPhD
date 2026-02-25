@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://umass-embodied-agi.github.io/sitemap-index.xml

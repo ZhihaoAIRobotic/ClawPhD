@@ -1,4 +1,0 @@
-User-agent: *
-Disallow:
-
-Sitemap: https://pratyushmaini.github.io/sitemap.xml

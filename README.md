@@ -24,15 +24,18 @@ examples/diagram_generation_command.sh
 Generated results:
 ![Iteration v3](examples/humanllm_framework_skillflow_v3.png)
 
-### Iterative Refinement with Human Feedback
+#### Iterative Refinement
 
 The following images demonstrate the Agent's iterative refinement process for generating a HumanLLM framework diagram:
 
-**First Generation (Initial Output):**
+First Generation (Initial Output):
 ![Initial Generation](examples/humanllm_framework_skill_based.png)
 
-**After Multiple Feedback Iterations:**
+After Multiple Self-feedback Iterations:
+
+1 iteration:
 ![Iteration v1](examples/humanllm_framework_skillflow_v1.png)
+3 iterations:
 ![Iteration v3](examples/humanllm_framework_skillflow_v3.png)
 
 These examples showcase how the Agent progressively improves diagram quality through human-in-the-loop feedback, resulting in more polished and publication-ready outputs.

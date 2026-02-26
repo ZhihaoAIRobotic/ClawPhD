@@ -12,7 +12,7 @@ An OpenClaw Agent for research that can turn academic papers into publication-re
 - [x] **Diagram Generation** — Create publication-quality academic illustrations and statistical plots from paper sections
 - [ ] **Paper Discovery** — Proactively search and summarize trending AI papers on a schedule
 - [ ] **Video Explainers** — Generate walkthrough videos from paper content
-- [ ] **Paper Websites** — Turn papers into interactive web pages
+- [x] **Paper Websites** — Turn papers into interactive web pages
 - [ ] **Poster Generation** — Produce conference-ready posters from papers
 - [ ] **Code Synthesis** — Extract and generate reproducible code from paper methodologies
 
@@ -22,10 +22,29 @@ An OpenClaw Agent for research that can turn academic papers into publication-re
 examples/diagram_generation_command.sh
 ```
 Generated results:
-![Generated Results1](examples/diagram1.png)
-![Generated Results2](examples/diagram2.png)
+![Iteration v3](humanllm_framework_skillflow_v3.png)
 
+### Iterative Refinement with Human Feedback
 
+The following images demonstrate the Agent's iterative refinement process for generating a HumanLLM framework diagram:
+
+**First Generation (Initial Output):**
+![Initial Generation](humanllm_framework_skill_based.png)
+
+**After Multiple Feedback Iterations:**
+![Iteration v1](humanllm_framework_skillflow_v1.png)
+![Iteration v3](humanllm_framework_skillflow_v3.png)
+
+These examples showcase how the Agent progressively improves diagram quality through human-in-the-loop feedback, resulting in more polished and publication-ready outputs.
+
+### Paper Website Generation
+
+The Agent can turn academic papers into interactive web pages:
+
+```bash
+examples/page_generation_command.sh
+```
+![Paper Website Example](examples/screenshot_v2.png)
 
 ## Quick Start
 

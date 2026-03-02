@@ -67,9 +67,12 @@ def onboard():
     
     console.print(f"\n{__logo__} clawphd is ready!")
     console.print("\nNext steps:")
-    console.print("  1. Add your API key to [cyan]~/.clawphd/config.json[/cyan]")
+    console.print("  1. Add your LLM API key to [cyan]~/.clawphd/config.json[/cyan]")
     console.print("     Get one at: https://openrouter.ai/keys")
-    console.print("  2. Chat: [cyan]clawphd agent -m \"Hello!\"[/cyan]")
+    console.print("  2. (Optional) Add a Semantic Scholar API key for figure search:")
+    console.print("     [dim]Set [cyan]tools.semanticScholar.apiKey[/cyan] in config.json[/dim]")
+    console.print("     [dim]Free registration: https://www.semanticscholar.org/product/api[/dim]")
+    console.print("  3. Chat: [cyan]clawphd agent -m \"Hello!\"[/cyan]")
     console.print("\n[dim]Want Telegram/WhatsApp? See: https://github.com/ClawPhD/ClawPhD#-chat-apps[/dim]")
 
 
@@ -210,6 +213,7 @@ def gateway(
         model=config.agents.defaults.model,
         max_iterations=config.agents.defaults.max_tool_iterations,
         brave_api_key=config.tools.web.search.api_key or None,
+        s2_api_key=config.tools.semantic_scholar.api_key or None,
         exec_config=config.tools.exec,
         cron_service=cron,
         restrict_to_workspace=config.tools.restrict_to_workspace,
@@ -386,6 +390,7 @@ def agent(
         provider=provider,
         workspace=config.workspace_path,
         brave_api_key=config.tools.web.search.api_key or None,
+        s2_api_key=config.tools.semantic_scholar.api_key or None,
         exec_config=config.tools.exec,
         restrict_to_workspace=config.tools.restrict_to_workspace,
         vlm_provider=vlm,

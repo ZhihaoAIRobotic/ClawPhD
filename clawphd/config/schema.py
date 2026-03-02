@@ -98,6 +98,11 @@ class WebToolsConfig(BaseModel):
     search: WebSearchConfig = Field(default_factory=WebSearchConfig)
 
 
+class SemanticScholarConfig(BaseModel):
+    """Semantic Scholar API configuration."""
+    api_key: str = ""  # Optional API key — free registration at semanticscholar.org/product/api
+
+
 class ExecToolConfig(BaseModel):
     """Shell exec tool configuration."""
     timeout: int = 60
@@ -106,6 +111,7 @@ class ExecToolConfig(BaseModel):
 class ToolsConfig(BaseModel):
     """Tools configuration."""
     web: WebToolsConfig = Field(default_factory=WebToolsConfig)
+    semantic_scholar: SemanticScholarConfig = Field(default_factory=SemanticScholarConfig)
     exec: ExecToolConfig = Field(default_factory=ExecToolConfig)
     restrict_to_workspace: bool = False  # If true, restrict all tool access to workspace directory
 
@@ -175,6 +181,8 @@ class Config(BaseSettings):
             return self.providers.openrouter.api_base or "https://openrouter.ai/api/v1"
         if any(k in model for k in ("zhipu", "glm", "zai")):
             return self.providers.zhipu.api_base
+        if any(k in model for k in ("moonshot", "kimi")):
+            return self.providers.moonshot.api_base or "https://api.moonshot.cn/v1"
         if "vllm" in model:
             return self.providers.vllm.api_base
         return None

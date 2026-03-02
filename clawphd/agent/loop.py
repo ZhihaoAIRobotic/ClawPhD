@@ -46,6 +46,12 @@ from clawphd.agent.tools.autopage import (
     ReviewHTMLVisualTool,
     ExtractTableHTMLTool,
 )
+from clawphd.agent.tools.figureref import (
+    SearchInfluentialPapersTool,
+    ExtractPaperFiguresTool,
+    ClassifyFiguresTool,
+    ExportFigureReferenceTool,
+)
 from clawphd.agent.subagent import SubagentManager
 from clawphd.session.manager import SessionManager
 
@@ -70,6 +76,7 @@ class AgentLoop:
         model: str | None = None,
         max_iterations: int = 20,
         brave_api_key: str | None = None,
+        s2_api_key: str | None = None,
         exec_config: "ExecToolConfig | None" = None,
         cron_service: "CronService | None" = None,
         restrict_to_workspace: bool = False,
@@ -86,6 +93,7 @@ class AgentLoop:
         self.model = model or provider.get_default_model()
         self.max_iterations = max_iterations
         self.brave_api_key = brave_api_key
+        self.s2_api_key = s2_api_key
         self.exec_config = exec_config or ExecToolConfig()
         self.cron_service = cron_service
         self.restrict_to_workspace = restrict_to_workspace
@@ -180,6 +188,15 @@ class AgentLoop:
             self.tools.register(
                 ExtractTableHTMLTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
             )
+
+        # Figure reference tools
+        self.tools.register(SearchInfluentialPapersTool(api_key=self.s2_api_key))
+        self.tools.register(
+            ExtractPaperFiguresTool(workspace=self.workspace, allowed_dir=allowed_dir)
+        )
+        self.tools.register(ExportFigureReferenceTool(workspace=self.workspace))
+        if self.vlm_provider:
+            self.tools.register(ClassifyFiguresTool(vlm_provider=self.vlm_provider))
 
     async def run(self) -> None:
         """Run the agent loop, processing messages from the bus."""
@@ -287,7 +304,8 @@ class AgentLoop:
                     for tc in response.tool_calls
                 ]
                 messages = self.context.add_assistant_message(
-                    messages, response.content, tool_call_dicts
+                    messages, response.content, tool_call_dicts,
+                    reasoning_content=response.reasoning_content,
                 )
                 
                 # Execute tools
@@ -393,9 +411,10 @@ class AgentLoop:
                     for tc in response.tool_calls
                 ]
                 messages = self.context.add_assistant_message(
-                    messages, response.content, tool_call_dicts
+                    messages, response.content, tool_call_dicts,
+                    reasoning_content=response.reasoning_content,
                 )
-                
+
                 for tool_call in response.tool_calls:
                     args_str = json.dumps(tool_call.arguments)
                     logger.debug(f"Executing tool: {tool_call.name} with arguments: {args_str}")
@@ -409,7 +428,7 @@ class AgentLoop:
             else:
                 final_content = response.content
                 break
-        
+
         if final_content is None:
             final_content = "Background task completed."
         

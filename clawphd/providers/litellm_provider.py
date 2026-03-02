@@ -32,8 +32,18 @@ class LiteLLMProvider(LLMProvider):
             (api_base and "openrouter" in api_base)
         )
         
-        # Track if using custom endpoint (vLLM, etc.)
-        self.is_vllm = bool(api_base) and not self.is_openrouter
+        # Track if using custom endpoint (vLLM, etc.).
+        # Known managed-provider domains must NOT be treated as vLLM even when
+        # api_base is set (e.g. moonshot, deepseek, zhipu all have explicit bases).
+        _MANAGED_DOMAINS = (
+            "moonshot.cn", "deepseek.com", "zhipuai.cn",
+            "dashscope.aliyuncs.com", "groq.com",
+        )
+        self.is_vllm = (
+            bool(api_base)
+            and not self.is_openrouter
+            and not any(d in (api_base or "") for d in _MANAGED_DOMAINS)
+        )
         
         # Configure LiteLLM based on provider
         if api_key:
@@ -136,9 +146,13 @@ class LiteLLMProvider(LLMProvider):
             "max_tokens": max_tokens,
             "temperature": temperature,
         }
-        
-        # Pass api_base directly for custom endpoints (vLLM, etc.)
-        if self.api_base:
+
+        # Pass api_key directly — more reliable than env vars for some providers.
+        if self.api_key and not self.is_openrouter:
+            kwargs["api_key"] = self.api_key
+        # Pass api_base only for vLLM/custom endpoints; managed providers
+        # (moonshot, deepseek, etc.) route themselves via the moonshot/ prefix.
+        if self.api_base and self.is_vllm:
             kwargs["api_base"] = self.api_base
         
         if tools:
@@ -185,12 +199,18 @@ class LiteLLMProvider(LLMProvider):
                 "completion_tokens": response.usage.completion_tokens,
                 "total_tokens": response.usage.total_tokens,
             }
-        
+
+        # Reasoning models (e.g. kimi-k2.5) return a reasoning_content field
+        # alongside the regular content. We must preserve it so the full
+        # assistant message can be echoed back in subsequent turns.
+        reasoning_content: str | None = getattr(message, "reasoning_content", None)
+
         return LLMResponse(
             content=message.content,
             tool_calls=tool_calls,
             finish_reason=choice.finish_reason or "stop",
             usage=usage,
+            reasoning_content=reasoning_content or None,
         )
     
     def get_default_model(self) -> str:

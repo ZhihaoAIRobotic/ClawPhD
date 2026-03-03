@@ -10,6 +10,7 @@ An OpenClaw Agent for research that can turn academic papers into publication-re
 ## Features
 
 - [x] **Diagram Generation** — Create publication-quality academic illustrations and statistical plots from paper sections
+- [x] **Figure Reference Extraction** — Search influential papers and extract real figures as editable SVG + PPTX
 - [ ] **Paper Discovery** — Proactively search and summarize trending AI papers on a schedule
 - [ ] **Video Explainers** — Generate walkthrough videos from paper content
 - [x] **Paper Websites** — Turn papers into interactive web pages
@@ -48,6 +49,15 @@ The Agent can turn academic papers into interactive web pages:
 examples/page_generation_command.sh
 ```
 ![Paper Website Example](examples/screenshot_v2.png)
+
+### Figure Reference Extraction
+
+The Agent searches influential papers and extracts all labelled figures into an editable reference pack (PNG + SVG + PPTX):
+
+```bash
+examples/figure_ref_command.sh
+```
+![Figure Reference Preview](examples/figure_ref_preview.png)
 
 ## Quick Start
 

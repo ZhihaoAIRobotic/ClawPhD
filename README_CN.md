@@ -10,9 +10,10 @@
 ## 功能
 
 - [x] **图表生成** — 根据论文章节自动生成出版级学术插图与统计图表
+- [x] **参考图提取** — 从有影响力的论文中搜索并提取真实图表，导出为可编辑的 SVG + PPTX
 - [ ] **论文发现** — 主动搜索热门 AI 论文并定时汇总推送
 - [ ] **视频讲解** — 根据论文内容生成讲解视频
-- [ ] **论文网站** — 将论文转化为交互式网页
+- [x] **论文网站** — 将论文转化为交互式网页
 - [ ] **海报生成** — 根据论文生成学术会议海报
 - [ ] **代码生成** — 从论文方法论中提取并生成可复现代码
 
@@ -123,6 +124,30 @@ clawphd gateway
 | 飞书 / Lark | `channels.feishu` | 通过 WebSocket 长连接 |
 
 所有渠道均支持 `allowFrom` 白名单控制访问权限。
+
+## Figure Reference 参考图提取
+
+无需额外 API Key，Agent 可自动完成以下流程：
+
+1. 通过 Semantic Scholar 搜索指定话题的高引论文
+2. 下载 PDF 并提取所有标注图（Figure N / Fig. N）
+3. 将图片保存为 PNG + SVG，并打包为带封面的 PPTX
+
+```bash
+clawphd agent -m "帮我找3篇 on-device MoE inference 的论文，把架构图和流程图提取出来做成 PPT"
+```
+
+输出文件位于 `<workspace>/outputs/figure_refs/`：
+
+```
+outputs/figure_refs/
+├── <paper_id>/          ← 每篇论文的 PNG + SVG + paper.pdf + figures.csv
+└── reference_pack_<topic>_<ts>.pptx
+```
+
+支持按图片类型筛选（架构图、实验图、概念示意图等）。若配置了视觉模型，还可用 VLM 对图片做精细分类。
+
+---
 
 ## PaperBanana 图表生成
 

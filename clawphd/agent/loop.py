@@ -52,6 +52,7 @@ from clawphd.agent.tools.figureref import (
     ClassifyFiguresTool,
     ExportFigureReferenceTool,
 )
+from clawphd.agent.tools.pdf2md import PdfToMarkdownTool
 from clawphd.agent.subagent import SubagentManager
 from clawphd.session.manager import SessionManager
 
@@ -197,6 +198,11 @@ class AgentLoop:
         self.tools.register(ExportFigureReferenceTool(workspace=self.workspace))
         if self.vlm_provider:
             self.tools.register(ClassifyFiguresTool(vlm_provider=self.vlm_provider))
+
+        # PDF → Markdown + figure export
+        self.tools.register(
+            PdfToMarkdownTool(workspace=self.workspace, allowed_dir=allowed_dir)
+        )
 
     async def run(self) -> None:
         """Run the agent loop, processing messages from the bus."""

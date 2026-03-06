@@ -36,6 +36,9 @@ dependencies = [
     "python-pptx>=0.6.21",
     "json-repair>=0.57.0,<1.0.0",
     "prompt-toolkit>=3.0.0",
+    # pdf_to_markdown tool
+    "docling>=2.0.0",
+    "PyMuPDF>=1.24.0",
 ]
 
 [project.optional-dependencies]

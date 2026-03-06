@@ -11,11 +11,44 @@
 
 - [x] **图表生成** — 根据论文章节自动生成出版级学术插图与统计图表
 - [x] **参考图提取** — 从有影响力的论文中搜索并提取真实图表，导出为可编辑的 SVG + PPTX
+- [x] **PDF → Markdown + 可编辑图** — 将任意论文 PDF 转为结构化 Markdown；导出所有标注图为 PNG + SVG + drawio；通过 AutoFigure-Edit / Edit-Banana 尝试可编辑重建
 - [ ] **论文发现** — 主动搜索热门 AI 论文并定时汇总推送
 - [ ] **视频讲解** — 根据论文内容生成讲解视频
 - [x] **论文网站** — 将论文转化为交互式网页
 - [ ] **海报生成** — 根据论文生成学术会议海报
 - [ ] **代码生成** — 从论文方法论中提取并生成可复现代码
+
+## 示例
+
+### 图表生成
+
+```bash
+examples/diagram_generation_command.sh
+```
+
+### 论文网页生成
+
+```bash
+examples/page_generation_command.sh
+```
+
+### 参考图提取
+
+```bash
+examples/figure_ref_command.sh
+```
+
+### PDF 转 Markdown + 可编辑图
+
+```bash
+examples/pdf2md_command.sh
+```
+
+典型输出目录：
+
+```text
+~/.clawphd/workspace/outputs/pdf2md/<pdf_stem>/
+```
 
 ## 快速开始
 
@@ -184,6 +217,65 @@ outputs/figure_refs/
     }
   ]
 }
+```
+
+## 可选依赖
+
+### PDF → Markdown 工具（`pdf_to_markdown`）
+
+**pip 安装（核心）**：
+
+```bash
+pip install "clawphd-ai[pdf2md]"
+# 或单独安装：
+pip install docling PyMuPDF Pillow
+```
+
+| 包名 | 用途 |
+|---|---|
+| `docling` | PDF → 结构化 Markdown（默认后端） |
+| `PyMuPDF` | 图检测、PNG + SVG（裁剪框）导出 |
+| `Pillow` | PNG 尺寸读取（用于 drawio 画布） |
+
+**可选外部 CLI 工具**（提升 SVG 质量或启用 drawio 导出）：
+
+| 工具 | 安装方式 | 用途 |
+|---|---|---|
+| `mutool` | [MuPDF 官网](https://mupdf.com/releases/) 加入 PATH | 最优质矢量 SVG 导出 |
+| `pdf2svg` | `apt install pdf2svg` / [源码](https://github.com/dawbarton/pdf2svg) | SVG 导出备用方案 |
+| `svgtodrawio` | `pip install svgtodrawio` | SVG → drawio 格式转换 |
+
+**可编辑重建工具**（外部研究代码仓库，非 pip 包）：
+
+当两个工具都未安装时，会自动使用内置的"两层 SVG fallback"（底图栅格层 + 空矢量层）代替。
+
+**AutoFigure-Edit**（优先级 1）：
+```bash
+git clone https://github.com/ResearAI/AutoFigure-Edit
+cd AutoFigure-Edit
+pip install -e .
+# 告知 ClawPhD 入口命令：
+export AUTOFIGURE_EDIT_CMD="python /path/to/AutoFigure-Edit/run.py"
+```
+
+**Edit-Banana**（优先级 2）：
+```bash
+git clone https://github.com/BIT-DataLab/Edit-Banana
+cd Edit-Banana
+pip install -e .
+export EDIT_BANANA_CMD="python /path/to/Edit-Banana/run.py"
+```
+
+环境变量也可写入 shell profile 或 `~/.clawphd/config.json` 永久生效。
+
+### 快速命令行测试
+
+```bash
+# 不启用重建的冒烟测试（无需任何外部工具）：
+python -m clawphd.agent.tools.pdf2md path/to/paper.pdf --no-rebuild
+
+# 完整流程（含 fallback rebuild）：
+python -m clawphd.agent.tools.pdf2md path/to/paper.pdf
 ```
 
 ## 许可证

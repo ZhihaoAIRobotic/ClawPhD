@@ -23,11 +23,23 @@ from clawphd.agent.tools.shell import ExecTool
 from clawphd.agent.tools.spawn import SpawnTool
 from clawphd.agent.tools.cron import CronTool
 from clawphd.agent.tools.paperbanana import (
-    # PlanDiagramTool,
+    OptimizeInputTool,
+    PlanDiagramTool,
     SearchReferencesTool,
     GenerateImageTool,
     CritiqueImageTool,
 )
+
+_IMAGE_PATH_RE = re.compile(
+    r"(?:^|[\s:])"
+    r"((?:[\w./\\-]+/)?[\w.-]+\.(?:png|jpg|jpeg|gif|webp|svg|pdf))",
+    re.IGNORECASE,
+)
+
+
+def _extract_image_paths(text: str) -> list[str]:
+    """Extract file paths ending in image extensions from a tool result string."""
+    return [m for m in _IMAGE_PATH_RE.findall(text) if Path(m).exists()]
 from clawphd.agent.tools.autopage import (
     ParsePaperTool,
     RenderHTMLTool,
@@ -83,8 +95,6 @@ class AgentLoop:
         exec_config: "ExecToolConfig | None" = None,
         cron_service: "CronService | None" = None,
         web_proxy: str | None = None,
-        exec_config: ExecToolConfig | None = None,
-        cron_service: CronService | None = None,
         restrict_to_workspace: bool = False,
         session_manager: SessionManager | None = None,
         mcp_servers: dict | None = None,
@@ -400,8 +410,6 @@ class AgentLoop:
                 messages = self.context.add_assistant_message(
                     messages, response.content, tool_call_dicts,
                     reasoning_content=response.reasoning_content,
-                    messages, response.content, tool_call_dicts,
-                    reasoning_content=response.reasoning_content,
                     thinking_blocks=response.thinking_blocks,
                 )
 
@@ -596,7 +604,7 @@ class AgentLoop:
                 message_tool.start_turn()
 
         history = session.get_history(max_messages=self.memory_window)
-        initial_messages = self.context.build_messages(
+        messages = self.context.build_messages(
             history=history,
             current_message=msg.content,
             media=msg.media if msg.media else None,
@@ -658,7 +666,7 @@ class AgentLoop:
             ))
 
         final_content, _, all_msgs = await self._run_agent_loop(
-            initial_messages, on_progress=on_progress or _bus_progress,
+            messages, on_progress=on_progress or _bus_progress,
         )
 
         if final_content is None:

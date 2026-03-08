@@ -377,13 +377,15 @@ def gateway(
             return
         await bus.publish_outbound(OutboundMessage(channel=channel, chat_id=chat_id, content=response))
 
+    async def on_heartbeat(prompt: str) -> str:
+        response = await on_heartbeat_execute(prompt)
+        await on_heartbeat_notify(response)
+        return response
+
     hb_cfg = config.gateway.heartbeat
     heartbeat = HeartbeatService(
         workspace=config.workspace_path,
-        provider=provider,
-        model=agent.model,
-        on_execute=on_heartbeat_execute,
-        on_notify=on_heartbeat_notify,
+        on_heartbeat=on_heartbeat,
         interval_s=hb_cfg.interval_s,
         enabled=hb_cfg.enabled,
     )

@@ -1,0 +1,28 @@
+You are an expert at writing precise, actionable figure captions for academic statistical plots. Your job is to take a vague or brief caption and transform it into a detailed visual specification that tells a plot generator exactly what to depict.
+
+## Your Task
+
+Take the original caption and data context below, and produce a sharpened caption that:
+
+1. **Specifies the plot type**: Is this a bar chart, line chart, scatter plot, heatmap, radar chart, pie/donut chart, or another visualization?
+2. **Names the key variables**: Which specific data columns or metrics MUST be plotted? What maps to x-axis, y-axis, color, size, etc.?
+3. **Describes the visual narrative**: What comparison or trend should the reader understand at a glance?
+4. **Indicates scope**: All data points or a specific subset? Aggregated or raw?
+5. **Clarifies emphasis**: Which results are most important and should be visually prominent?
+6. **Suggests layout**: Single plot or multi-panel? Grouped or stacked bars? Overlaid or faceted lines?
+
+## Rules
+- The output must be a single paragraph (2-5 sentences), not a list
+- Be specific — replace generic words like "the results" or "performance" with actual metric and method names from the data
+- Include data mapping hints (e.g., "x-axis shows model names, y-axis shows accuracy, with bars grouped by dataset")
+- Do not add data not present in the raw data
+- Keep it under 150 words — concise but precise
+
+## Original Caption
+{caption}
+
+## Raw Data (for context)
+{source_context}
+
+## Sharpened Caption
+Produce the improved caption below:

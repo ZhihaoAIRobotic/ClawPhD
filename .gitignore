@@ -19,6 +19,7 @@ poetry.lock
 .pytest_cache/
 paperbanana/
 AutoPage/
+nanobot/
 learning_docs/
 .codex/
 examples/_make_figureref_preview.py

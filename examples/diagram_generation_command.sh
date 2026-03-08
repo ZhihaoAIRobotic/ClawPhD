@@ -1,4 +1,4 @@
-clawphd agent -m "Generate a methodology diagram for the following paper section.  please read the diagram-gen skill first for better diagram. 
+clawphd agent -m "Generate a methodology diagram for the following paper section. 
 The figure is a wide, horizontal flowchart-style diagram illustrating the \"Paperbanana\" framework. The layout flows from left to right on a clean white background, divided into two main colored regions: the \"Linear Planning Phase\" (left/middle) and the \"Iterative Refinement Loop\" (right).
 
 **1. Leftmost Section: Inputs**

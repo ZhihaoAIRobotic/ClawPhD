@@ -1,5 +1,19 @@
 """Utility functions for clawphd."""
 
-from clawphd.utils.helpers import ensure_dir, get_workspace_path, get_data_path
+from clawphd.utils.helpers import (
+    detect_image_mime,
+    ensure_dir,
+    safe_filename,
+    split_message,
+    sync_workspace_templates,
+    timestamp,
+)
 
-__all__ = ["ensure_dir", "get_workspace_path", "get_data_path"]
+__all__ = [
+    "detect_image_mime",
+    "ensure_dir",
+    "safe_filename",
+    "split_message",
+    "sync_workspace_templates",
+    "timestamp",
+]

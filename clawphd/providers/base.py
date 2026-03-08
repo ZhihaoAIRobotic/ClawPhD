@@ -20,10 +20,9 @@ class LLMResponse:
     tool_calls: list[ToolCallRequest] = field(default_factory=list)
     finish_reason: str = "stop"
     usage: dict[str, int] = field(default_factory=dict)
-    # Preserved for reasoning models (e.g. kimi-k2.5) — must be echoed back
-    # in the assistant message when the conversation continues after tool calls.
-    reasoning_content: str | None = None
-    
+    reasoning_content: str | None = None  # Kimi, DeepSeek-R1 etc.
+    thinking_blocks: list[dict] | None = None  # Anthropic extended thinking
+
     @property
     def has_tool_calls(self) -> bool:
         """Check if response contains tool calls."""
@@ -31,17 +30,68 @@ class LLMResponse:
 
 
 class LLMProvider(ABC):
-    """
-    Abstract base class for LLM providers.
-    
-    Implementations should handle the specifics of each provider's API
-    while maintaining a consistent interface.
-    """
-    
+    """Abstract base class for LLM providers."""
+
     def __init__(self, api_key: str | None = None, api_base: str | None = None):
         self.api_key = api_key
         self.api_base = api_base
-    
+
+    @staticmethod
+    def _sanitize_empty_content(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Replace empty text content that causes provider 400 errors."""
+        result: list[dict[str, Any]] = []
+        for msg in messages:
+            content = msg.get("content")
+
+            if isinstance(content, str) and not content:
+                clean = dict(msg)
+                clean["content"] = None if (msg.get("role") == "assistant" and msg.get("tool_calls")) else "(empty)"
+                result.append(clean)
+                continue
+
+            if isinstance(content, list):
+                filtered = [
+                    item for item in content
+                    if not (
+                        isinstance(item, dict)
+                        and item.get("type") in ("text", "input_text", "output_text")
+                        and not item.get("text")
+                    )
+                ]
+                if len(filtered) != len(content):
+                    clean = dict(msg)
+                    if filtered:
+                        clean["content"] = filtered
+                    elif msg.get("role") == "assistant" and msg.get("tool_calls"):
+                        clean["content"] = None
+                    else:
+                        clean["content"] = "(empty)"
+                    result.append(clean)
+                    continue
+
+            if isinstance(content, dict):
+                clean = dict(msg)
+                clean["content"] = [content]
+                result.append(clean)
+                continue
+
+            result.append(msg)
+        return result
+
+    @staticmethod
+    def _sanitize_request_messages(
+        messages: list[dict[str, Any]],
+        allowed_keys: frozenset[str],
+    ) -> list[dict[str, Any]]:
+        """Keep only provider-safe message keys and normalize assistant content."""
+        sanitized = []
+        for msg in messages:
+            clean = {k: v for k, v in msg.items() if k in allowed_keys}
+            if clean.get("role") == "assistant" and "content" not in clean:
+                clean["content"] = None
+            sanitized.append(clean)
+        return sanitized
+
     @abstractmethod
     async def chat(
         self,
@@ -50,22 +100,11 @@ class LLMProvider(ABC):
         model: str | None = None,
         max_tokens: int = 4096,
         temperature: float = 0.7,
+        reasoning_effort: str | None = None,
     ) -> LLMResponse:
-        """
-        Send a chat completion request.
-        
-        Args:
-            messages: List of message dicts with 'role' and 'content'.
-            tools: Optional list of tool definitions.
-            model: Model identifier (provider-specific).
-            max_tokens: Maximum tokens in response.
-            temperature: Sampling temperature.
-        
-        Returns:
-            LLMResponse with content and/or tool calls.
-        """
+        """Send a chat completion request."""
         pass
-    
+
     @abstractmethod
     def get_default_model(self) -> str:
         """Get the default model for this provider."""

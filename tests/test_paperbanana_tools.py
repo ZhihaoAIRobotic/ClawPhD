@@ -22,6 +22,8 @@ needs_pillow = pytest.mark.skipif(not HAS_PILLOW, reason="Pillow not installed")
 from clawphd.agent.tools.paperbanana import (
     CritiqueImageTool,
     GenerateImageTool,
+    OptimizeInputTool,
+    PlanDiagramTool,
     SearchReferencesTool,
     _extract_python,
     _run_code,

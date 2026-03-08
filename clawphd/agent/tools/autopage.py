@@ -340,8 +340,8 @@ class MatchTemplateTool(Tool):
         "has_navigation": 0.7,
     }
 
-    # Bundled templates live at clawphd/templates/ next to clawphd/agent/
-    _BUILTIN_TEMPLATES = Path(__file__).resolve().parent.parent.parent / "templates"
+    # Website templates live at the repo root website_template/
+    _BUILTIN_TEMPLATES = Path(__file__).resolve().parent.parent.parent.parent / "website_template"
 
     def __init__(self, workspace: Path, allowed_dir: Path | None = None):
         self._workspace = workspace

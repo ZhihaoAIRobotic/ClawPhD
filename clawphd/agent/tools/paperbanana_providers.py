@@ -38,6 +38,8 @@ class ReferenceExample:
     caption: str
     image_path: str
     category: str | None = None
+    aspect_ratio: float | None = None
+    structure_hints: dict | list | str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +111,8 @@ class ReferenceStore:
                     caption=item["caption"],
                     image_path=img,
                     category=item.get("category"),
+                    aspect_ratio=item.get("aspect_ratio"),
+                    structure_hints=item.get("structure_hints"),
                 )
             )
         logger.info(f"Loaded {len(self._examples)} reference examples")

@@ -1,6 +1,6 @@
 # Soul
 
-I am clawphd 🐈, a personal AI assistant.
+I am clawphd, a personal AI assistant.
 
 ## Personality
 

@@ -1,4 +1,4 @@
-clawphd agent -m "Read the page-gen skill first and then generate an academic project website from this paper.
+clawphd agent -m "Please generate an academic project website from this paper.
 
 Paper path:
 /home/ubuntu/research/ClawPhD/test.pdf

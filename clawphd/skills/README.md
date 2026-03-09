@@ -17,9 +17,14 @@ The skill format and metadata structure follow OpenClaw's conventions to maintai
 
 | Skill | Description |
 |-------|-------------|
+| `arxiv-doc-builder` | Convert arXiv papers to structured Markdown documentation |
+| `arxivterminal` | Fetch, search, and manage arXiv papers locally via CLI |
+| `cron` | Schedule reminders and recurring tasks |
+| `diagram-gen` | Generate publication-quality academic diagrams and plots |
+| `figure-ref` | Find and extract real figures from academic papers |
 | `github` | Interact with GitHub using the `gh` CLI |
-| `weather` | Get weather info using wttr.in and Open-Meteo |
+| `page-gen` | Generate academic paper project webpages from PDF |
+| `skill-creator` | Create new skills |
 | `summarize` | Summarize URLs, files, and YouTube videos |
 | `tmux` | Remote-control tmux sessions |
-| `clawhub` | Search and install skills from ClawHub registry |
-| `skill-creator` | Create new skills |
+| `weather` | Get weather info using wttr.in and Open-Meteo |

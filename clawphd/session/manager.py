@@ -15,7 +15,8 @@ from clawphd.utils.helpers import ensure_dir, safe_filename
 
 @dataclass
 class Session:
-    """A conversation session.
+    """
+    A conversation session.
 
     Stores messages in JSONL format for easy reading and persistence.
 
@@ -29,7 +30,7 @@ class Session:
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
     metadata: dict[str, Any] = field(default_factory=dict)
-    last_consolidated: int = 0
+    last_consolidated: int = 0  # Number of messages already consolidated to files
 
     def add_message(self, role: str, content: str, **kwargs: Any) -> None:
         """Add a message to the session."""
@@ -70,7 +71,11 @@ class Session:
 
 
 class SessionManager:
-    """Manages conversation sessions stored as JSONL files."""
+    """
+    Manages conversation sessions.
+
+    Sessions are stored as JSONL files in the sessions directory.
+    """
 
     def __init__(self, workspace: Path):
         self.workspace = workspace
@@ -89,7 +94,15 @@ class SessionManager:
         return self.legacy_sessions_dir / f"{safe_key}.jsonl"
 
     def get_or_create(self, key: str) -> Session:
-        """Get an existing session or create a new one."""
+        """
+        Get an existing session or create a new one.
+
+        Args:
+            key: Session key (usually channel:chat_id).
+
+        Returns:
+            The session.
+        """
         if key in self._cache:
             return self._cache[key]
 
@@ -171,11 +184,17 @@ class SessionManager:
         self._cache.pop(key, None)
 
     def list_sessions(self) -> list[dict[str, Any]]:
-        """List all sessions."""
+        """
+        List all sessions.
+
+        Returns:
+            List of session info dicts.
+        """
         sessions = []
 
         for path in self.sessions_dir.glob("*.jsonl"):
             try:
+                # Read just the metadata line
                 with open(path, encoding="utf-8") as f:
                     first_line = f.readline().strip()
                     if first_line:

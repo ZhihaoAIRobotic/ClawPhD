@@ -241,9 +241,9 @@ class DiscordChannel(BaseChannel):
                 "token": self.config.token,
                 "intents": self.config.intents,
                 "properties": {
-                    "os": "nanobot",
-                    "browser": "nanobot",
-                    "device": "nanobot",
+                    "os": "clawphd",
+                    "browser": "clawphd",
+                    "device": "clawphd",
                 },
             },
         }

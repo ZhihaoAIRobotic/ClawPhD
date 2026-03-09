@@ -26,7 +26,7 @@ def _resolve_path(
 class ReadFileTool(Tool):
     """Tool to read file contents."""
 
-    _MAX_CHARS = 128_000
+    _MAX_CHARS = 128_000  # ~128 KB — prevents OOM from reading huge files into LLM context
 
     def __init__(self, workspace: Path | None = None, allowed_dir: Path | None = None):
         self._workspace = workspace
@@ -57,7 +57,7 @@ class ReadFileTool(Tool):
                 return f"Error: Not a file: {path}"
 
             size = file_path.stat().st_size
-            if size > self._MAX_CHARS * 4:
+            if size > self._MAX_CHARS * 4:  # rough upper bound (UTF-8 chars ≤ 4 bytes)
                 return (
                     f"Error: File too large ({size:,} bytes). "
                     f"Use exec tool with head/tail/grep to read portions."
@@ -149,6 +149,7 @@ class EditFileTool(Tool):
             if old_text not in content:
                 return self._not_found_message(old_text, content, path)
 
+            # Count occurrences
             count = content.count(old_text)
             if count > 1:
                 return f"Warning: old_text appears {count} times. Please provide more context to make it unique."

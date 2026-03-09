@@ -1,7 +1,7 @@
 ---
 name: diagram-gen
 description: "Generate publication-quality academic diagrams and plots from paper methodology text using optimize_input, plan_diagram, generate_image, and critique_image tools."
-metadata: {"clawphd":{"emoji":"📊","requires":{"env":["GOOGLE_API_KEY"]}}}
+metadata: {"clawphd":{"emoji":"📊"}}
 ---
 
 # Academic Diagram Generation

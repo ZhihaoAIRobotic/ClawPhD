@@ -53,4 +53,7 @@ The figure is a wide, horizontal flowchart-style diagram illustrating the \"Pape
 **5. Styling**
 *   **Agents:** Cute, consistent robot avatars with distinct accessories.
 *   **Typography:** Sans-serif for main text. **Serif Italic (LaTeX style)** for all variables (\$S, C, P, I, \\mathcal{R}, \\mathcal{E}, \\mathcal{G}\$).
-*   **Colors:** Blue accents for Planning; Orange accents for Refinement. Main flow arrows in solid black; secondary inputs in dashed gray."
+*   **Colors:** Blue accents for Planning; Orange accents for Refinement. Main flow arrows in solid black; secondary inputs in dashed gray.
+
+After finishing the diagram, please tell me the image path.
+"

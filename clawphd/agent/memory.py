@@ -125,8 +125,10 @@ class MemoryStore:
                 return False
 
             args = response.tool_calls[0].arguments
+            # Some providers return arguments as a JSON string instead of dict
             if isinstance(args, str):
                 args = json.loads(args)
+            # Some providers return arguments as a list (handle edge case)
             if isinstance(args, list):
                 if args and isinstance(args[0], dict):
                     args = args[0]

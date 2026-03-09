@@ -31,9 +31,13 @@ class SubagentManager:
         max_tokens: int = 4096,
         reasoning_effort: str | None = None,
         brave_api_key: str | None = None,
+        s2_api_key: str | None = None,
         web_proxy: str | None = None,
         exec_config: "ExecToolConfig | None" = None,
         restrict_to_workspace: bool = False,
+        vlm_provider: Any = None,
+        image_gen_provider: Any = None,
+        reference_store: Any = None,
     ):
         from clawphd.config.schema import ExecToolConfig
         self.provider = provider
@@ -44,11 +48,85 @@ class SubagentManager:
         self.max_tokens = max_tokens
         self.reasoning_effort = reasoning_effort
         self.brave_api_key = brave_api_key
+        self.s2_api_key = s2_api_key
         self.web_proxy = web_proxy
         self.exec_config = exec_config or ExecToolConfig()
         self.restrict_to_workspace = restrict_to_workspace
+        self.vlm_provider = vlm_provider
+        self.image_gen_provider = image_gen_provider
+        self.reference_store = reference_store
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
-        self._session_tasks: dict[str, set[str]] = {}
+        self._session_tasks: dict[str, set[str]] = {}  # session_key -> {task_id, ...}
+
+    def _register_clawphd_tools(self, tools: ToolRegistry, allowed_dir: Path | None) -> None:
+        """Register ClawPhD-specific research and diagram tools for subagents."""
+        try:
+            from clawphd.agent.tools.autopage import (
+                ExtractTableHTMLTool,
+                MatchTemplateTool,
+                ParsePaperTool,
+                RenderHTMLTool,
+                ReviewHTMLVisualTool,
+            )
+            from clawphd.agent.tools.figureref import (
+                ClassifyFiguresTool,
+                ExportFigureReferenceTool,
+                ExtractPaperFiguresTool,
+                SearchInfluentialPapersTool,
+            )
+            from clawphd.agent.tools.paperbanana import (
+                CritiqueImageTool,
+                GenerateImageTool,
+                OptimizeInputTool,
+                PlanDiagramTool,
+                SearchReferencesTool,
+            )
+        except ImportError:
+            return
+
+        if self.vlm_provider or self.image_gen_provider:
+            output_dir = str(self.workspace / "outputs")
+            tools.register(OptimizeInputTool(vlm_provider=self.vlm_provider))
+            tools.register(
+                PlanDiagramTool(
+                    vlm_provider=self.vlm_provider,
+                    reference_store=self.reference_store,
+                )
+            )
+            tools.register(
+                SearchReferencesTool(
+                    vlm_provider=self.vlm_provider,
+                    reference_store=self.reference_store,
+                )
+            )
+            tools.register(
+                GenerateImageTool(
+                    image_gen_provider=self.image_gen_provider,
+                    vlm_provider=self.vlm_provider,
+                    output_dir=output_dir,
+                )
+            )
+            tools.register(CritiqueImageTool(vlm_provider=self.vlm_provider))
+
+        tools.register(ParsePaperTool(workspace=self.workspace, allowed_dir=allowed_dir))
+        tools.register(RenderHTMLTool(workspace=self.workspace, allowed_dir=allowed_dir))
+        tools.register(MatchTemplateTool(workspace=self.workspace, allowed_dir=allowed_dir))
+
+        if self.vlm_provider:
+            tools.register(
+                ReviewHTMLVisualTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
+            )
+            tools.register(
+                ExtractTableHTMLTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
+            )
+
+        tools.register(SearchInfluentialPapersTool(api_key=self.s2_api_key))
+        tools.register(
+            ExtractPaperFiguresTool(workspace=self.workspace, allowed_dir=allowed_dir)
+        )
+        tools.register(ExportFigureReferenceTool(workspace=self.workspace))
+        if self.vlm_provider:
+            tools.register(ClassifyFiguresTool(vlm_provider=self.vlm_provider))
 
     async def spawn(
         self,
@@ -93,6 +171,7 @@ class SubagentManager:
         logger.info("Subagent [{}] starting task: {}", task_id, label)
 
         try:
+            # Build subagent tools (no message tool, no spawn tool)
             tools = ToolRegistry()
             allowed_dir = self.workspace if self.restrict_to_workspace else None
             tools.register(ReadFileTool(workspace=self.workspace, allowed_dir=allowed_dir))
@@ -107,13 +186,15 @@ class SubagentManager:
             ))
             tools.register(WebSearchTool(api_key=self.brave_api_key, proxy=self.web_proxy))
             tools.register(WebFetchTool(proxy=self.web_proxy))
-
+            self._register_clawphd_tools(tools, allowed_dir)
+            
             system_prompt = self._build_subagent_prompt()
             messages: list[dict[str, Any]] = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": task},
             ]
 
+            # Run agent loop (limited iterations)
             max_iterations = 15
             iteration = 0
             final_result: str | None = None
@@ -131,6 +212,7 @@ class SubagentManager:
                 )
 
                 if response.has_tool_calls:
+                    # Add assistant message with tool calls
                     tool_call_dicts = [
                         {
                             "id": tc.id,
@@ -148,6 +230,7 @@ class SubagentManager:
                         "tool_calls": tool_call_dicts,
                     })
 
+                    # Execute tools
                     for tool_call in response.tool_calls:
                         args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
                         logger.debug("Subagent [{}] executing: {} with arguments: {}", task_id, tool_call.name, args_str)
@@ -194,6 +277,7 @@ Result:
 
 Summarize this naturally for the user. Keep it brief (1-2 sentences). Do not mention technical details like "subagent" or task IDs."""
 
+        # Inject as system message to trigger main agent
         msg = InboundMessage(
             channel="system",
             sender_id="subagent",
@@ -203,7 +287,7 @@ Summarize this naturally for the user. Keep it brief (1-2 sentences). Do not men
 
         await self.bus.publish_inbound(msg)
         logger.debug("Subagent [{}] announced result to {}:{}", task_id, origin['channel'], origin['chat_id'])
-
+    
     def _build_subagent_prompt(self) -> str:
         """Build a focused system prompt for the subagent."""
         from clawphd.agent.context import ContextBuilder
@@ -225,7 +309,7 @@ Stay focused on the assigned task. Your final response will be reported back to 
             parts.append(f"## Skills\n\nRead SKILL.md with read_file to use a skill.\n\n{skills_summary}")
 
         return "\n\n".join(parts)
-
+    
     async def cancel_by_session(self, session_key: str) -> int:
         """Cancel all subagents for the given session. Returns count cancelled."""
         tasks = [self._running_tasks[tid] for tid in self._session_tasks.get(session_key, [])

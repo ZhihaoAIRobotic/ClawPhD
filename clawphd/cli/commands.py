@@ -311,8 +311,16 @@ def _build_diagram_providers(config: Config):
     except ImportError:
         return None, None, None
 
+    # Prefer Replicate when:
+    #  - provider is explicitly "replicate", OR
+    #  - provider is "auto" AND the user explicitly set replicate_api_token in
+    #    tools.diagram config (i.e. not just from env var).  Having OpenRouter
+    #    configured for the main LLM is common and should not silently override
+    #    an explicit Replicate diagram token.
     use_replicate = choice == "replicate" or (
-        choice == "auto" and not openrouter_key and bool(replicate_token)
+        choice == "auto"
+        and bool(replicate_token)
+        and (bool(diagram.replicate_api_token) or not openrouter_key)
     )
 
     if use_replicate and replicate_token:

@@ -38,6 +38,7 @@ class SubagentManager:
         vlm_provider: Any = None,
         image_gen_provider: Any = None,
         reference_store: Any = None,
+        fal_api_key: str | None = None,
     ):
         from clawphd.config.schema import ExecToolConfig
         self.provider = provider
@@ -55,6 +56,7 @@ class SubagentManager:
         self.vlm_provider = vlm_provider
         self.image_gen_provider = image_gen_provider
         self.reference_store = reference_store
+        self.fal_api_key = fal_api_key
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
         self._session_tasks: dict[str, set[str]] = {}  # session_key -> {task_id, ...}
 
@@ -127,6 +129,57 @@ class SubagentManager:
         tools.register(ExportFigureReferenceTool(workspace=self.workspace))
         if self.vlm_provider:
             tools.register(ClassifyFiguresTool(vlm_provider=self.vlm_provider))
+
+        # AutoFigure: image-to-drawio tools
+        try:
+            from clawphd.agent.tools.autofigure import (
+                CropRemoveBgTool,
+                GenerateDrawioTemplateTool,
+                GenerateSVGTemplateTool,
+                ReplaceIconsDrawioTool,
+                ReplaceIconsSVGTool,
+                SegmentFigureTool,
+            )
+        except ImportError:
+            pass
+        else:
+            if self.fal_api_key:
+                tools.register(SegmentFigureTool(fal_api_key=self.fal_api_key))
+            tools.register(CropRemoveBgTool())
+            af_vlm = self._get_autofigure_vlm()
+            if af_vlm:
+                tools.register(GenerateSVGTemplateTool(vlm_provider=af_vlm))
+                tools.register(GenerateDrawioTemplateTool(vlm_provider=af_vlm))
+            tools.register(ReplaceIconsSVGTool())
+            tools.register(ReplaceIconsDrawioTool())
+
+    def _get_autofigure_vlm(self) -> Any:
+        """Get or create a multimodal VLM for autofigure (same logic as AgentLoop)."""
+        from clawphd.agent.tools.paperbanana_providers import OpenRouterVLM
+
+        TEXT_ONLY = {"openai/gpt-4.1-mini", "openai/gpt-4o-mini", "openai/gpt-3.5-turbo"}
+        DEFAULT = "google/gemini-2.5-flash"
+
+        if self.vlm_provider is None:
+            return None
+
+        if isinstance(self.vlm_provider, OpenRouterVLM):
+            current = getattr(self.vlm_provider, "_model", "")
+            if current in TEXT_ONLY:
+                try:
+                    from clawphd.config.loader import load_config
+                    cfg = load_config()
+                    override = cfg.tools.autofigure.vlm_model
+                except Exception:
+                    override = ""
+                model = override or DEFAULT
+                return OpenRouterVLM(
+                    api_key=self.vlm_provider._api_key,
+                    model=model,
+                    api_base=self.vlm_provider._api_base,
+                )
+
+        return self.vlm_provider
 
     async def spawn(
         self,

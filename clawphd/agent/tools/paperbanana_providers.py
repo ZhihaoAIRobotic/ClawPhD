@@ -144,18 +144,31 @@ class OpenRouterVLM:
         temperature: float = 1.0,
         max_tokens: int = 4096,
         response_format: str | None = None,
+        timeout: float = 300.0,
+        image_detail: str = "auto",
         **kwargs: Any,
     ) -> str:
+        """Generate text, optionally conditioned on images.
+
+        Args:
+            image_detail: ``"auto"`` downscales to 1024px JPEG (default,
+                fast/cheap); ``"high"`` sends PNG at up to 2048px (slower,
+                preserves fine text and lines in academic figures).
+        """
         import httpx
 
         user_content: list[dict[str, Any]] = []
         if images:
+            if image_detail == "high":
+                img_fmt, img_max, img_mime = "PNG", 2048, "image/png"
+            else:
+                img_fmt, img_max, img_mime = "JPEG", 1024, "image/jpeg"
             for img in images:
-                b64 = _image_to_base64(img, fmt="JPEG", max_dim=1024)
+                b64 = _image_to_base64(img, fmt=img_fmt, max_dim=img_max)
                 user_content.append(
                     {
                         "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+                        "image_url": {"url": f"data:{img_mime};base64,{b64}"},
                     }
                 )
         user_content.append({"type": "text", "text": prompt})
@@ -178,7 +191,7 @@ class OpenRouterVLM:
             "Authorization": f"Bearer {self._api_key}",
             "Content-Type": "application/json",
         }
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 f"{self._api_base}/chat/completions",
                 headers=headers,
@@ -416,6 +429,7 @@ class ReplicateVLM:
         event loop stays free.
         """
         import asyncio
+        import httpx
 
         try:
             import replicate as _replicate
@@ -458,15 +472,25 @@ class ReplicateVLM:
                 "\n\nIMPORTANT: Respond with strict JSON only, no markdown fences."
             )
 
+        timeout_sec = kwargs.get("timeout", 600.0)
+        _httpx_timeout = httpx.Timeout(
+            timeout_sec, read=timeout_sec, write=60.0, connect=10.0, pool=10.0,
+        )
+
         def _stream() -> str:
             """Synchronous Replicate streaming call (offloaded to a thread)."""
             chunks: list[str] = []
             if self._api_token:
-                client = _replicate.Client(api_token=self._api_token)
+                client = _replicate.Client(
+                    api_token=self._api_token, timeout=_httpx_timeout,
+                )
                 for event in client.stream(self._model, input=input_params):
                     chunks.append(str(event))
             else:
-                # Falls back to REPLICATE_API_TOKEN env var
+                # Falls back to REPLICATE_API_TOKEN env var;
+                # override the module-level default client timeout.
+                default_client = _replicate.default_client
+                default_client._timeout = _httpx_timeout  # type: ignore[attr-defined]
                 for event in _replicate.stream(self._model, input=input_params):
                     chunks.append(str(event))
             return "".join(chunks)

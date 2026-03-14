@@ -318,6 +318,13 @@ class DiagramToolsConfig(Base):
     replicate_image_model: str = "google/gemini-2.5-flash-image"
 
 
+class AutoFigureConfig(Base):
+    """AutoFigure (image-to-drawio/SVG) tool configuration."""
+
+    fal_api_key: str = ""  # fal.ai API key for SAM3 segmentation
+    vlm_model: str = ""  # Override VLM model for drawio/SVG generation (must be multimodal)
+
+
 class ExecToolConfig(Base):
     """Shell exec tool configuration."""
 
@@ -343,6 +350,7 @@ class ToolsConfig(Base):
     web: WebToolsConfig = Field(default_factory=WebToolsConfig)
     semantic_scholar: SemanticScholarConfig = Field(default_factory=SemanticScholarConfig)
     diagram: DiagramToolsConfig = Field(default_factory=DiagramToolsConfig)
+    autofigure: AutoFigureConfig = Field(default_factory=AutoFigureConfig)
     exec: ExecToolConfig = Field(default_factory=ExecToolConfig)
     restrict_to_workspace: bool = False  # If true, restrict all tool access to workspace directory
     mcp_servers: dict[str, MCPServerConfig] = Field(default_factory=dict)

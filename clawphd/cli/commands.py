@@ -364,6 +364,7 @@ def _build_diagram_providers(config: Config):
 def _build_agent_loop_kwargs(config: Config) -> dict:
     """Build shared AgentLoop kwargs from runtime config."""
     vlm, image_gen, ref_store = _build_diagram_providers(config)
+    fal_key = config.tools.autofigure.fal_api_key or os.environ.get("FAL_KEY") or None
     return {
         "workspace": config.workspace_path,
         "model": config.agents.defaults.model,
@@ -382,6 +383,7 @@ def _build_agent_loop_kwargs(config: Config) -> dict:
         "vlm_provider": vlm,
         "image_gen_provider": image_gen,
         "reference_store": ref_store,
+        "fal_api_key": fal_key,
     }
 
 

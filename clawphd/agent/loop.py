@@ -103,6 +103,8 @@ class AgentLoop:
         vlm_provider: Any = None,
         image_gen_provider: Any = None,
         reference_store: Any = None,
+        # AutoFigure: image-to-SVG tools
+        fal_api_key: str | None = None,
     ):
         from clawphd.config.schema import ExecToolConfig
         self.bus = bus
@@ -124,6 +126,7 @@ class AgentLoop:
         self.vlm_provider = vlm_provider
         self.image_gen_provider = image_gen_provider
         self.reference_store = reference_store
+        self.fal_api_key = fal_api_key
 
         self.context = ContextBuilder(workspace)
         self.sessions = session_manager or SessionManager(workspace)
@@ -144,6 +147,7 @@ class AgentLoop:
             vlm_provider=vlm_provider,
             image_gen_provider=image_gen_provider,
             reference_store=reference_store,
+            fal_api_key=fal_api_key,
         )
 
         self._running = False
@@ -243,6 +247,71 @@ class AgentLoop:
         self.tools.register(ExportFigureReferenceTool(workspace=self.workspace))
         if self.vlm_provider:
             self.tools.register(ClassifyFiguresTool(vlm_provider=self.vlm_provider))
+
+        # AutoFigure: image-to-drawio tools
+        self._register_autofigure_tools()
+
+    def _register_autofigure_tools(self) -> None:
+        """Register AutoFigure image-to-drawio tools."""
+        try:
+            from clawphd.agent.tools.autofigure import (
+                CropRemoveBgTool,
+                GenerateDrawioTemplateTool,
+                GenerateSVGTemplateTool,
+                ReplaceIconsDrawioTool,
+                ReplaceIconsSVGTool,
+                SegmentFigureTool,
+            )
+        except ImportError:
+            return
+
+        if self.fal_api_key:
+            self.tools.register(SegmentFigureTool(fal_api_key=self.fal_api_key))
+        self.tools.register(CropRemoveBgTool())
+
+        af_vlm = self._get_autofigure_vlm()
+        if af_vlm:
+            self.tools.register(GenerateSVGTemplateTool(vlm_provider=af_vlm))
+            self.tools.register(GenerateDrawioTemplateTool(vlm_provider=af_vlm))
+
+        self.tools.register(ReplaceIconsSVGTool())
+        self.tools.register(ReplaceIconsDrawioTool())
+
+    def _get_autofigure_vlm(self) -> Any:
+        """Get or create a multimodal VLM for autofigure template generation.
+
+        If the shared VLM uses a text-only model (e.g. gpt-4.1-mini), build a
+        dedicated OpenRouterVLM with a multimodal model instead.
+        """
+        from clawphd.agent.tools.paperbanana_providers import OpenRouterVLM
+
+        TEXT_ONLY_MODELS = {"openai/gpt-4.1-mini", "openai/gpt-4o-mini", "openai/gpt-3.5-turbo"}
+        AUTOFIGURE_DEFAULT_MODEL = "google/gemini-2.5-flash"
+
+        if self.vlm_provider is None:
+            return None
+
+        if isinstance(self.vlm_provider, OpenRouterVLM):
+            current_model = getattr(self.vlm_provider, "_model", "")
+            if current_model in TEXT_ONLY_MODELS:
+                try:
+                    from clawphd.config.loader import load_config
+                    cfg = load_config()
+                    override_model = cfg.tools.autofigure.vlm_model
+                except Exception:
+                    override_model = ""
+                model = override_model or AUTOFIGURE_DEFAULT_MODEL
+                logger.info(
+                    "AutoFigure: overriding text-only VLM '{}' → multimodal '{}'",
+                    current_model, model,
+                )
+                return OpenRouterVLM(
+                    api_key=self.vlm_provider._api_key,
+                    model=model,
+                    api_base=self.vlm_provider._api_base,
+                )
+
+        return self.vlm_provider
 
     async def run(self) -> None:
         """Run the agent loop, processing messages from the bus."""

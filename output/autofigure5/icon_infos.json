@@ -1,0 +1,122 @@
+[
+  {
+    "label": "AF01",
+    "label_raw": "<AF>01",
+    "path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF01_nobg.png",
+    "nobg_path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF01_nobg.png",
+    "x1": 99,
+    "y1": 402,
+    "x2": 148,
+    "y2": 443,
+    "width": 49,
+    "height": 41
+  },
+  {
+    "label": "AF02",
+    "label_raw": "<AF>02",
+    "path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF02_nobg.png",
+    "nobg_path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF02_nobg.png",
+    "x1": 40,
+    "y1": 397,
+    "x2": 85,
+    "y2": 448,
+    "width": 45,
+    "height": 51
+  },
+  {
+    "label": "AF03",
+    "label_raw": "<AF>03",
+    "path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF03_nobg.png",
+    "nobg_path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF03_nobg.png",
+    "x1": 677,
+    "y1": 154,
+    "x2": 725,
+    "y2": 200,
+    "width": 48,
+    "height": 46
+  },
+  {
+    "label": "AF04",
+    "label_raw": "<AF>04",
+    "path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF04_nobg.png",
+    "nobg_path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF04_nobg.png",
+    "x1": 346,
+    "y1": 154,
+    "x2": 419,
+    "y2": 219,
+    "width": 73,
+    "height": 65
+  },
+  {
+    "label": "AF05",
+    "label_raw": "<AF>05",
+    "path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF05_nobg.png",
+    "nobg_path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF05_nobg.png",
+    "x1": 317,
+    "y1": 350,
+    "x2": 440,
+    "y2": 431,
+    "width": 123,
+    "height": 81
+  },
+  {
+    "label": "AF06",
+    "label_raw": "<AF>06",
+    "path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF06_nobg.png",
+    "nobg_path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF06_nobg.png",
+    "x1": 999,
+    "y1": 350,
+    "x2": 1047,
+    "y2": 394,
+    "width": 48,
+    "height": 44
+  },
+  {
+    "label": "AF07",
+    "label_raw": "<AF>07",
+    "path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF07_nobg.png",
+    "nobg_path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF07_nobg.png",
+    "x1": 328,
+    "y1": 556,
+    "x2": 434,
+    "y2": 644,
+    "width": 106,
+    "height": 88
+  },
+  {
+    "label": "AF08",
+    "label_raw": "<AF>08",
+    "path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF08_nobg.png",
+    "nobg_path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF08_nobg.png",
+    "x1": 993,
+    "y1": 149,
+    "x2": 1052,
+    "y2": 196,
+    "width": 59,
+    "height": 47
+  },
+  {
+    "label": "AF09",
+    "label_raw": "<AF>09",
+    "path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF09_nobg.png",
+    "nobg_path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF09_nobg.png",
+    "x1": 1224,
+    "y1": 307,
+    "x2": 1335,
+    "y2": 367,
+    "width": 111,
+    "height": 60
+  },
+  {
+    "label": "AF10",
+    "label_raw": "<AF>10",
+    "path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF10_nobg.png",
+    "nobg_path": "/home/ubuntu/research/ClawPhD/output/autofigure5/icons/icon_AF10_nobg.png",
+    "x1": 988,
+    "y1": 543,
+    "x2": 1127,
+    "y2": 637,
+    "width": 139,
+    "height": 94
+  }
+]

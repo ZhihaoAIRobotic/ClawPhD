@@ -1,15 +1,15 @@
 ---
 name: pdf2md
-description: "Convert a local paper PDF to structured Markdown and export all figures as PNG + SVG + drawio. Attempts editable figure reconstruction (AutoFigure-Edit / Edit-Banana) by default. Use when the user wants to parse a paper PDF, extract its text as Markdown, or get editable/exportable figure assets."
+description: "Convert a local paper PDF to structured Markdown and export all figures as PNG + SVG + drawio. Attempts editable figure reconstruction via the built-in autofigure pipeline (SAM3 → RMBG-2.0 → VLM → SVG), falling back to a layered-SVG wrapper when API keys are unavailable. Use when the user wants to parse a paper PDF, extract its text as Markdown, or get editable/exportable figure assets."
 metadata: {"clawphd":{"emoji":"📄"}}
 ---
 
 # PDF → Markdown & Editable Figures
 
-**One tool, zero extra API keys.**
-Uses `pdf_to_markdown` with your local PDF.  No cloud API is required for the
-core Markdown conversion.  Figure reconstruction delegates to external tools
-when available and degrades gracefully otherwise.
+**One tool.** Uses `pdf_to_markdown` with your local PDF.
+Core Markdown conversion needs no cloud API.  Editable figure reconstruction
+uses the built-in autofigure pipeline when `vlm_provider` + `fal_api_key` are
+configured; otherwise degrades gracefully to a layered-SVG fallback.
 
 ## When to use
 
@@ -39,64 +39,60 @@ pdf_to_markdown(
 | `out_root` | string | `outputs/pdf2md` | Root output dir; paper lands in `<out_root>/<original_pdf_stem>/` |
 | `backend` | `"docling"` \| `"mineru"` | `"docling"` | Markdown engine; mineru requires separate CLI install |
 | `export_figures` | bool | `true` | Extract labelled figures to `assets/figures/` |
-| `figure_box_source` | `"auto"` \| `"docling"` \| `"fitz"` | `"auto"` | How figure boxes are located: docling first then fallback, or force one |
+| `figure_box_source` | `"auto"` \| `"docling"` \| `"fitz"` | `"auto"` | How figure boxes are located |
 | `export_svg` | bool | `true` | Attempt SVG per figure (mutool → pdf2svg → fitz → PNG wrapper) |
-| `export_drawio` | bool | `true` | Attempt drawio per figure (built-in editable conversion from SVG; no external CLI required) |
+| `export_drawio` | bool | `true` | Attempt drawio per figure (built-in editable conversion from SVG) |
 | **`enable_rebuild`** | **bool** | **`true`** | **Run editable reconstruction (see below). DEFAULT IS TRUE.** |
-| `rebuild_backend` | `"auto"` \| `"autofigure_edit"` \| `"edit_banana"` | `"auto"` | Which external rebuild tool to prefer |
-| `rebuild_timeout_sec` | int | `300` | Per-figure timeout for external rebuild tools |
 
-> **`enable_rebuild` defaults to `true`.**  This means the tool always
-> attempts to produce an editable `rebuilt.svg` (and optionally
-> `rebuilt.drawio`) for each figure.  When neither AutoFigure-Edit nor
-> Edit-Banana is installed, it falls back to a two-layer SVG that embeds the
-> raster PNG and provides an empty vector layer the user can populate in
-> Inkscape or draw.io.  The fallback never crashes the pipeline.
+> **`enable_rebuild` defaults to `true`.**  When the autofigure pipeline is
+> fully configured (needs `fal_api_key` in config + a VLM provider), it runs
+> SAM3 segmentation → RMBG-2.0 background removal → VLM SVG template →
+> icon replacement.  When not configured it falls back to a two-layer SVG
+> that embeds the raster PNG with an empty vector overlay.  The fallback
+> never crashes the pipeline.
+
+## Editable rebuild pipeline
+
+The autofigure pipeline runs entirely in-process (no external CLI needed):
+
+| Step | Module | What it does |
+|---|---|---|
+| 1 | `SegmentFigureTool` | SAM3 via fal.ai — detects icons/elements |
+| 2 | `CropRemoveBgTool` | RMBG-2.0 (local torch) — removes backgrounds |
+| 3 | `GenerateSVGTemplateTool` | VLM reconstructs figure layout as SVG |
+| 4 | `ReplaceIconsSVGTool` | Embeds transparent icon PNGs into SVG |
+
+Requirements for full autofigure rebuild:
+- `fal_api_key` set in `~/.clawphd/config.json` under `tools.autofigure`
+- A multimodal VLM provider configured (openrouter / gemini recommended)
+- `pip install clawphd-ai[autofigure]` (torch / torchvision / transformers)
 
 ## Output directory layout
 
 ```
 outputs/pdf2md/<original_pdf_stem>/
-    <original_pdf_name>.pdf   ← copy of source PDF for easy checking
-    <original_pdf_stem>.md   ← full Markdown of the paper
+    <original_pdf_name>.pdf   ← copy of source PDF
+    <original_pdf_stem>.md    ← full Markdown of the paper
     meta/
-        doc.json             ← docling structured document model (pydantic serialisation)
+        doc.json             ← docling structured document model
         run.json             ← run metadata: timing, tool detection, warnings
         figures.json         ← array of per-figure metadata records
     assets/
-        images/              ← (reserved for inline images referenced in paper.md)
         figures/
             fig_001/
                 fig_001.png          ← cropped raster (always present if PyMuPDF available)
-                fig_001.svg          ← vector SVG (present if export_svg=true)
-                fig_001.drawio       ← drawio XML (present if export_drawio=true)
-                meta.json            ← figure-level metadata (caption, page, paths)
-                rebuild/
-                    rebuilt.svg      ← editable reconstruction (enable_rebuild=true)
-                    rebuilt.drawio   ← drawio of rebuilt SVG (when possible)
-                    logs.txt         ← stdout/stderr from external rebuild tools
+                fig_001.svg          ← vector SVG (only when enable_rebuild=false)
+                fig_001.drawio       ← drawio XML (only when enable_rebuild=false)
+                meta.json            ← figure-level metadata
+                rebuild/             ← present when enable_rebuild=true
+                    autofigure/      ← autofigure intermediate files (SAM3, crops, icons)
+                    rebuilt.svg      ← primary SVG output (autofigure or layered-SVG fallback)
+                    rebuilt.drawio   ← primary drawio output
             fig_002/
             ...
 ```
 
-`paper_id` (`sha1(pdf_bytes)[:12]`) is still returned in metadata for traceability.
-
-## Rebuild tool detection
-
-`run.json` records which external tools were found at runtime under
-`tools_detected`:
-
-| Tool | How to provide |
-|---|---|
-| `autofigure-edit` | Set `AUTOFIGURE_EDIT_CMD` env var **or** put `autofigure-edit` on PATH |
-| `edit-banana` | Set `EDIT_BANANA_CMD` env var **or** put `edit-banana` on PATH |
-| `mutool` | Install MuPDF and ensure `mutool` is on PATH |
-| `pdf2svg` | Install pdf2svg and ensure it is on PATH |
-| `svgtodrawio` | Optional fallback converter; install if you want external conversion parity |
-
-When none of the external rebuild tools are found, each figure still gets a
-`rebuild/rebuilt.svg` via the built-in two-layer fallback (raster base +
-empty vector overlay).
+`paper_id` (`sha1(pdf_bytes)[:12]`) is returned in metadata for traceability.
 
 ## SVG export priority
 
@@ -104,6 +100,26 @@ empty vector overlay).
 2. **pdf2svg** — alternative CLI, full-page then viewBox-cropped
 3. **fitz** (PyMuPDF built-in) — per-figure cropbox SVG
 4. **PNG-embedding SVG** — final fallback, always works
+
+## `run.json` fields
+
+```json
+{
+  "paper_id":        "...",
+  "figures_total":   5,
+  "svg_exported":    5,
+  "drawio_exported": 5,
+  "rebuilt_exported":5,
+  "elapsed_sec":     12.4,
+  "tools_detected": {
+    "mutool":             true,
+    "pdf2svg":            false,
+    "svgtodrawio":        false,
+    "autofigure_enabled": true
+  },
+  "warnings": []
+}
+```
 
 ## Typical workflow
 
@@ -113,16 +129,15 @@ empty vector overlay).
 pdf_to_markdown(pdf_path="path/to/paper.pdf")
 ```
 
-This produces `<original_pdf_stem>.md`, a copied source PDF, all figures as PNG + SVG, and a `rebuilt.svg` per
-figure (fallback layered SVG when no external tool is found).
+Produces `<stem>.md`, copied PDF, all figures as PNG + SVG, and a
+`rebuilt.svg` per figure (autofigure if configured, else layered-SVG fallback).
 
-### With drawio and explicit rebuild backend
+### With drawio export
 
 ```
 pdf_to_markdown(
     pdf_path      = "papers/attention_is_all_you_need.pdf",
-    export_drawio = true,
-    rebuild_backend = "auto"
+    export_drawio = true
 )
 ```
 
@@ -143,6 +158,7 @@ pdf_to_markdown(
     backend  = "mineru"
 )
 ```
+
 Requires the MinerU CLI (`mineru` or `magic-pdf`) on PATH.  Falls back to
 docling automatically if MinerU is absent or fails.
 

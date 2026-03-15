@@ -128,7 +128,6 @@ def test_creates_markdown_and_run_json() -> None:
                 export_svg=True,
                 export_drawio=False,
                 enable_rebuild=True,      # default; falls back to layered SVG
-                rebuild_timeout_sec=30,
             )
         )
         result = json.loads(result_str)
@@ -250,7 +249,6 @@ def test_real_pdf_integration() -> None:
             export_svg=True,
             export_drawio=True,
             enable_rebuild=True,
-            rebuild_timeout_sec=60,
         )
     )
 

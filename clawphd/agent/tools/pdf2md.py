@@ -3,8 +3,9 @@
 Markdown conversion uses docling (default) or MinerU CLI.  Figure export
 produces PNG (always) plus optional SVG (via mutool / pdf2svg / fitz) and
 drawio (via svgtodrawio CLI or embedded-image fallback).  Editable-figure
-reconstruction delegates to AutoFigure-Edit or Edit-Banana when available,
-falling back to a lightweight layered-SVG wrapper.
+reconstruction uses the autofigure pipeline (SAM3 segmentation → RMBG-2.0
+background removal → VLM SVG template → icon replacement), falling back to a
+lightweight layered-SVG wrapper when API keys or VLM are unavailable.
 
 Output layout::
 
@@ -20,13 +21,13 @@ Output layout::
             figures/
                 fig_001/
                     fig_001.png
-                    fig_001.svg        (optional)
-                    fig_001.drawio     (optional)
+                    fig_001.svg        (only when enable_rebuild=False)
+                    fig_001.drawio     (only when enable_rebuild=False)
                     meta.json
-                    rebuild/
-                        rebuilt.svg    (optional)
-                        rebuilt.drawio (optional)
-                        logs.txt       (optional)
+                    rebuild/           (only when enable_rebuild=True)
+                        autofigure/    (autofigure intermediate files)
+                        rebuilt.svg    (primary SVG output when rebuild is on)
+                        rebuilt.drawio (primary drawio output when rebuild is on)
 """
 
 from __future__ import annotations
@@ -34,7 +35,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -147,33 +147,6 @@ def _detect_pdf2svg() -> str | None:
 def _detect_svgtodrawio() -> str | None:
     """Return the svgtodrawio executable path, or None if not found."""
     return shutil.which("svgtodrawio")
-
-
-def _detect_autofigure_edit() -> str | None:
-    """Return the AutoFigure-Edit entry command, or None.
-
-    Checks ``AUTOFIGURE_EDIT_CMD`` env var first, then ``autofigure-edit``
-    and ``autofigure`` on PATH.
-    """
-    env_cmd = os.environ.get("AUTOFIGURE_EDIT_CMD", "").strip()
-    if env_cmd:
-        return env_cmd
-    for name in ("autofigure-edit", "autofigure"):
-        found = shutil.which(name)
-        if found:
-            return found
-    return None
-
-
-def _detect_edit_banana() -> str | None:
-    """Return the Edit-Banana entry command, or None.
-
-    Checks ``EDIT_BANANA_CMD`` env var first, then ``edit-banana`` on PATH.
-    """
-    env_cmd = os.environ.get("EDIT_BANANA_CMD", "").strip()
-    if env_cmd:
-        return env_cmd
-    return shutil.which("edit-banana")
 
 
 # ---------------------------------------------------------------------------
@@ -924,104 +897,102 @@ def _append_log(log_path: Path, text: str) -> None:
         pass
 
 
-def _rebuild_with_autofigure_edit(
-    cmd: str,
-    fig_dir: Path,
+async def _rebuild_with_autofigure(
     png_path: Path,
-    svg_path: Path | None,
-    caption: str,
-    timeout: int,
+    rebuild_dir: Path,
+    vlm_provider: Any,
+    fal_api_key: str,
     warnings: list[str],
 ) -> Path | None:
-    """Invoke AutoFigure-Edit to produce a rebuilt.svg.
+    """Run the autofigure pipeline to produce an editable rebuilt.svg.
+
+    Pipeline: SAM3 segmentation → RMBG-2.0 background removal →
+    VLM SVG template → icon replacement.
 
     Returns the output SVG path on success, None otherwise.
     """
-    rebuild_dir = fig_dir / "rebuild"
-    rebuild_dir.mkdir(parents=True, exist_ok=True)
-    log_path = rebuild_dir / "logs.txt"
-    out_svg  = rebuild_dir / "rebuilt.svg"
-
-    args = [cmd, "--input", str(png_path), "--output", str(out_svg)]
-    if caption:
-        args += ["--caption", caption[:500]]
-    if svg_path and svg_path.exists():
-        args += ["--svg", str(svg_path)]
-
-    _append_log(log_path, f"[autofigure-edit] cmd: {' '.join(args)}\n")
     try:
-        r = subprocess.run(
-            args, check=False, capture_output=True, text=True, timeout=timeout
+        from clawphd.agent.tools.autofigure import (
+            CropRemoveBgTool,
+            GenerateSVGTemplateTool,
+            ReplaceIconsSVGTool,
+            SegmentFigureTool,
         )
-        _append_log(
-            log_path,
-            f"rc={r.returncode}\n"
-            f"STDOUT:\n{r.stdout[:3000]}\n"
-            f"STDERR:\n{r.stderr[:1000]}\n",
-        )
-        if r.returncode == 0 and out_svg.exists() and out_svg.stat().st_size > 50:
-            return out_svg
-        warnings.append(
-            f"autofigure-edit failed (rc={r.returncode}) for {fig_dir.name}"
-        )
-        return None
-    except subprocess.TimeoutExpired:
-        warnings.append(f"autofigure-edit timed out ({timeout} s) for {fig_dir.name}")
-        _append_log(log_path, f"TIMEOUT after {timeout} s\n")
-        return None
-    except Exception as exc:
-        warnings.append(f"autofigure-edit error: {exc}")
-        _append_log(log_path, f"ERROR: {exc}\n")
+    except ImportError as exc:
+        warnings.append(f"autofigure import failed: {exc}")
         return None
 
+    af_dir = rebuild_dir / "autofigure"
+    af_dir.mkdir(parents=True, exist_ok=True)
 
-def _rebuild_with_edit_banana(
-    cmd: str,
-    fig_dir: Path,
-    png_path: Path,
-    svg_path: Path | None,
-    caption: str,
-    timeout: int,
-    warnings: list[str],
-) -> Path | None:
-    """Invoke Edit-Banana to produce a rebuilt.svg.
-
-    Returns the output SVG path on success, None otherwise.
-    """
-    rebuild_dir = fig_dir / "rebuild"
-    rebuild_dir.mkdir(parents=True, exist_ok=True)
-    log_path = rebuild_dir / "logs.txt"
-    out_svg  = rebuild_dir / "rebuilt.svg"
-
-    args = [cmd, "--input", str(png_path), "--output", str(out_svg)]
-    if caption:
-        args += ["--caption", caption[:500]]
-
-    _append_log(log_path, f"[edit-banana] cmd: {' '.join(args)}\n")
     try:
-        r = subprocess.run(
-            args, check=False, capture_output=True, text=True, timeout=timeout
+        # Step 1: SAM3 icon segmentation (fal.ai)
+        seg = json.loads(
+            await SegmentFigureTool(fal_api_key=fal_api_key).execute(
+                image_path=str(png_path), output_dir=str(af_dir),
+            )
         )
-        _append_log(
-            log_path,
-            f"rc={r.returncode}\n"
-            f"STDOUT:\n{r.stdout[:3000]}\n"
-            f"STDERR:\n{r.stderr[:1000]}\n",
+        if seg.get("error") or not seg.get("boxlib_path"):
+            warnings.append(
+                f"autofigure SAM3 failed for {png_path.parent.name}: "
+                f"{seg.get('error', 'no boxes detected')}"
+            )
+            return None
+
+        # Step 2: Crop icons + remove backgrounds (RMBG-2.0)
+        crop = json.loads(
+            await CropRemoveBgTool().execute(
+                image_path=str(png_path),
+                boxlib_path=seg["boxlib_path"],
+                output_dir=str(af_dir),
+            )
         )
-        if r.returncode == 0 and out_svg.exists() and out_svg.stat().st_size > 50:
+        if crop.get("error"):
+            warnings.append(
+                f"autofigure RMBG failed for {png_path.parent.name}: {crop['error']}"
+            )
+            return None
+
+        # Step 3: VLM reconstructs SVG template
+        tpl = json.loads(
+            await GenerateSVGTemplateTool(vlm_provider=vlm_provider).execute(
+                figure_path=str(png_path),
+                samed_path=seg["samed_path"],
+                boxlib_path=seg["boxlib_path"],
+                output_dir=str(af_dir),
+            )
+        )
+        if tpl.get("error"):
+            warnings.append(
+                f"autofigure VLM template failed for {png_path.parent.name}: {tpl['error']}"
+            )
+            return None
+
+        # Step 4: Embed transparent icons into SVG placeholders
+        out_svg = rebuild_dir / "rebuilt.svg"
+        rep = json.loads(
+            await ReplaceIconsSVGTool().execute(
+                template_svg_path=tpl["optimized_template_path"],
+                icon_infos_path=crop["icon_infos_path"],
+                figure_path=str(png_path),
+                output_path=str(out_svg),
+            )
+        )
+        if rep.get("error"):
+            warnings.append(
+                f"autofigure icon replace failed for {png_path.parent.name}: {rep['error']}"
+            )
+            return None
+
+        if out_svg.exists() and out_svg.stat().st_size > 50:
+            logger.info("autofigure rebuild succeeded: {}", out_svg)
             return out_svg
-        warnings.append(
-            f"edit-banana failed (rc={r.returncode}) for {fig_dir.name}"
-        )
-        return None
-    except subprocess.TimeoutExpired:
-        warnings.append(f"edit-banana timed out ({timeout} s) for {fig_dir.name}")
-        _append_log(log_path, f"TIMEOUT after {timeout} s\n")
-        return None
+
     except Exception as exc:
-        warnings.append(f"edit-banana error: {exc}")
-        _append_log(log_path, f"ERROR: {exc}\n")
-        return None
+        warnings.append(f"autofigure pipeline error for {png_path.parent.name}: {exc}")
+        logger.warning("autofigure rebuild failed: {}", exc)
+
+    return None
 
 
 def _rebuild_fallback_svg(
@@ -1075,55 +1046,28 @@ def _rebuild_fallback_svg(
         return None
 
 
-def _rebuild_figure(
+async def _rebuild_figure(
     fig_dir: Path,
     png_path: Path,
-    svg_path: Path | None,
-    caption: str,
-    rebuild_backend: str,
-    rebuild_timeout: int,
+    vlm_provider: Any | None,
+    fal_api_key: str | None,
     warnings: list[str],
 ) -> Path | None:
     """Attempt editable-figure reconstruction for one figure.
 
-    Priority: AutoFigure-Edit → Edit-Banana → lightweight layered-SVG fallback.
-    Never raises; returns None if all attempts fail and no fallback is reached.
+    Priority: autofigure pipeline (SAM3+RMBG+VLM) → lightweight layered-SVG fallback.
+    Never raises; returns None if all attempts fail.
     """
-    afe_cmd = _detect_autofigure_edit()
-    eb_cmd  = _detect_edit_banana()
+    rebuild_dir = fig_dir / "rebuild"
 
-    if rebuild_backend == "autofigure_edit":
-        order = ["autofigure_edit", "fallback"]
-    elif rebuild_backend == "edit_banana":
-        order = ["edit_banana", "fallback"]
-    else:  # "auto"
-        order = ["autofigure_edit", "edit_banana", "fallback"]
+    if vlm_provider and fal_api_key:
+        result = await _rebuild_with_autofigure(
+            png_path, rebuild_dir, vlm_provider, fal_api_key, warnings,
+        )
+        if result:
+            return result
 
-    for step in order:
-        if step == "autofigure_edit":
-            if not afe_cmd:
-                continue   # "not found" warning already emitted once before the figure loop
-            result = _rebuild_with_autofigure_edit(
-                afe_cmd, fig_dir, png_path, svg_path,
-                caption, rebuild_timeout, warnings,
-            )
-            if result:
-                return result
-
-        elif step == "edit_banana":
-            if not eb_cmd:
-                continue   # "not found" warning already emitted once before the figure loop
-            result = _rebuild_with_edit_banana(
-                eb_cmd, fig_dir, png_path, svg_path,
-                caption, rebuild_timeout, warnings,
-            )
-            if result:
-                return result
-
-        elif step == "fallback":
-            return _rebuild_fallback_svg(fig_dir, png_path, warnings)
-
-    return None
+    return _rebuild_fallback_svg(fig_dir, png_path, warnings)
 
 
 # ---------------------------------------------------------------------------
@@ -1422,17 +1366,17 @@ class PdfToMarkdownTool(Tool):
 
     Uses docling (default) or MinerU as the Markdown backend.  Figures are
     exported as PNG (always), optional SVG (via mutool / pdf2svg / fitz), and
-    optional drawio.  Editable reconstruction is attempted via AutoFigure-Edit,
-    Edit-Banana, or a lightweight layered-SVG fallback (enable_rebuild=true by
-    default).
+    optional drawio.  Editable reconstruction uses the autofigure pipeline
+    (SAM3 + RMBG-2.0 + VLM) when vlm_provider and fal_api_key are configured,
+    otherwise falls back to a lightweight layered-SVG wrapper.
     """
 
     name = "pdf_to_markdown"
     description = (
         "Convert a local paper PDF to structured Markdown. "
         "Exports all labelled figures as PNG (and optionally SVG / drawio). "
-        "Attempts editable figure reconstruction via AutoFigure-Edit or Edit-Banana "
-        "(enabled by default; falls back gracefully when tools are absent). "
+        "Attempts editable figure reconstruction via the autofigure pipeline "
+        "(SAM3 + RMBG-2.0 + VLM), falling back to a layered-SVG wrapper. "
         "Output is written to outputs/pdf2md/<paper_name>/."
     )
     parameters = {
@@ -1488,41 +1432,32 @@ class PdfToMarkdownTool(Tool):
                     "Attempt drawio export for each figure. "
                     "Generates a two-layer drawio file: locked SVG background + "
                     "editable text cells extracted from the vector SVG. "
-                    "No external tools required. Default: true."
+                    "Default: true."
                 ),
             },
             "enable_rebuild": {
                 "type": "boolean",
                 "description": (
                     "Run editable-figure reconstruction for each figure "
-                    "(AutoFigure-Edit → Edit-Banana → layered-SVG fallback). "
+                    "(autofigure pipeline → layered-SVG fallback). "
                     "Default: true.  Failures never abort the main pipeline."
                 ),
-            },
-            "rebuild_backend": {
-                "type": "string",
-                "description": (
-                    "Rebuild tool preference: "
-                    "'auto' tries AutoFigure-Edit then Edit-Banana (default); "
-                    "'autofigure_edit' forces AutoFigure-Edit only; "
-                    "'edit_banana' forces Edit-Banana only."
-                ),
-                "enum": ["auto", "autofigure_edit", "edit_banana"],
-            },
-            "rebuild_timeout_sec": {
-                "type": "integer",
-                "description": (
-                    "Per-figure rebuild timeout in seconds. Default: 300."
-                ),
-                "minimum": 10,
             },
         },
         "required": ["pdf_path"],
     }
 
-    def __init__(self, workspace: Path, allowed_dir: Path | None = None):
+    def __init__(
+        self,
+        workspace: Path,
+        allowed_dir: Path | None = None,
+        vlm_provider: Any = None,
+        fal_api_key: str | None = None,
+    ):
         self._workspace = workspace
         self._allowed_dir = allowed_dir
+        self._vlm_provider = vlm_provider
+        self._fal_api_key = fal_api_key
 
     async def execute(
         self,
@@ -1534,8 +1469,6 @@ class PdfToMarkdownTool(Tool):
         export_svg: bool = True,
         export_drawio: bool = True,
         enable_rebuild: bool = True,
-        rebuild_backend: str = "auto",
-        rebuild_timeout_sec: int = 300,
         **kwargs: Any,
     ) -> str:
         warnings: list[str] = []
@@ -1657,18 +1590,12 @@ class PdfToMarkdownTool(Tool):
 
             figures_total = len(raw_figs)
 
-            # Emit rebuild-tool availability warnings once (not repeated per figure)
+            # Warn once if autofigure pipeline is not fully configured
             if enable_rebuild and raw_figs:
-                if not _detect_autofigure_edit():
+                if not (self._vlm_provider and self._fal_api_key):
                     warnings.append(
-                        "autofigure-edit not found — set AUTOFIGURE_EDIT_CMD or clone "
-                        "https://github.com/ResearAI/AutoFigure-Edit; "
-                        "using fallback two-layer SVG rebuild for all figures"
-                    )
-                if not _detect_edit_banana():
-                    warnings.append(
-                        "edit-banana not found — set EDIT_BANANA_CMD or clone "
-                        "https://github.com/BIT-DataLab/Edit-Banana"
+                        "autofigure pipeline not configured (needs vlm_provider + fal_api_key); "
+                        "using layered-SVG fallback for editable rebuild"
                     )
 
             for idx, fig_info in enumerate(raw_figs, start=1):
@@ -1698,9 +1625,9 @@ class PdfToMarkdownTool(Tool):
                 if png_ok:
                     fig_meta["png_path"] = str(png_path)
 
-                # SVG
+                # SVG — skipped when rebuild is enabled (rebuilt.svg supersedes it)
                 svg_path: Path | None = None
-                if export_svg:
+                if export_svg and not enable_rebuild:
                     svg_path = _export_figure_svg(
                         resolved,
                         fig_info["page_no"],
@@ -1714,8 +1641,8 @@ class PdfToMarkdownTool(Tool):
                         fig_meta["svg_path"] = str(svg_path)
                         svg_exported += 1
 
-                # drawio
-                if export_drawio:
+                # drawio — skipped when rebuild is enabled (rebuilt.drawio supersedes it)
+                if export_drawio and not enable_rebuild:
                     drawio_path = _export_figure_drawio(
                         svg_path,
                         png_path if png_ok else None,
@@ -1743,18 +1670,19 @@ class PdfToMarkdownTool(Tool):
                             f"{fig_stem}: no PNG available as rebuild input — skipping"
                         )
                     else:
-                        rebuilt_svg = _rebuild_figure(
+                        rebuilt_svg = await _rebuild_figure(
                             fig_d,
                             png_path,
-                            svg_path,
-                            fig_info["caption"],
-                            rebuild_backend,
-                            rebuild_timeout_sec,
+                            self._vlm_provider,
+                            self._fal_api_key,
                             warnings,
                         )
                         if rebuilt_svg:
                             fig_meta["rebuilt_svg"] = str(rebuilt_svg)
+                            # Rebuilt SVG is the primary SVG output when rebuild is on
+                            fig_meta["svg_path"] = str(rebuilt_svg)
                             rebuilt_exported += 1
+                            svg_exported += 1
 
                             # Also try rebuilt.drawio (editable two-layer format)
                             rd_path = fig_d / "rebuild" / "rebuilt.drawio"
@@ -1764,6 +1692,8 @@ class PdfToMarkdownTool(Tool):
                             )
                             if done:
                                 fig_meta["rebuilt_drawio"] = str(rd_path)
+                                fig_meta["drawio_path"] = str(rd_path)
+                                drawio_exported += 1
                             warnings.extend(rd_warnings)
 
                 figures_meta.append(fig_meta)
@@ -1802,11 +1732,10 @@ class PdfToMarkdownTool(Tool):
             "drawio_exported":  drawio_exported,
             "rebuilt_exported": rebuilt_exported,
             "tools_detected": {
-                "mutool":          _detect_mutool(),
-                "pdf2svg":         _detect_pdf2svg(),
-                "svgtodrawio":     _detect_svgtodrawio(),
-                "autofigure_edit": _detect_autofigure_edit(),
-                "edit_banana":     _detect_edit_banana(),
+                "mutool":             _detect_mutool(),
+                "pdf2svg":            _detect_pdf2svg(),
+                "svgtodrawio":        _detect_svgtodrawio(),
+                "autofigure_enabled": bool(self._vlm_provider and self._fal_api_key),
             },
             "warnings": warnings,
         }
@@ -1868,28 +1797,28 @@ def _main() -> None:
                         help="Disable drawio export")
     parser.add_argument("--no-rebuild", action="store_true",
                         help="Disable editable rebuild (faster)")
-    parser.add_argument("--rebuild-backend", default="auto",
-                        choices=["auto", "autofigure_edit", "edit_banana"])
-    parser.add_argument("--rebuild-timeout", type=int, default=300,
-                        metavar="SEC")
     args = parser.parse_args()
 
-    workspace = Path(args.out_root).parent if args.out_root else Path.cwd()
+    pdf_path = str(Path(args.pdf_path).resolve())
+    out_root = str(Path(args.out_root).resolve()) if args.out_root else None
+    workspace = Path(out_root).parent if out_root else Path.cwd()
     tool = PdfToMarkdownTool(workspace=workspace)
 
     result_str = asyncio.run(
         tool.execute(
-            pdf_path=args.pdf_path,
-            out_root=args.out_root,
+            pdf_path=pdf_path,
+            out_root=out_root,
             backend=args.backend,
             export_figures=not args.no_figures,
             export_svg=not args.no_svg,
             export_drawio=not args.no_drawio,
             enable_rebuild=not args.no_rebuild,
-            rebuild_backend=args.rebuild_backend,
-            rebuild_timeout_sec=args.rebuild_timeout,
         )
     )
+
+    if result_str.startswith("Error:"):
+        print(result_str)
+        raise SystemExit(1)
 
     result = json.loads(result_str)
     print(f"\n{'='*60}")

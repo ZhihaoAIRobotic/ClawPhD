@@ -254,7 +254,12 @@ class AgentLoop:
 
         # PDF → Markdown + figure export
         self.tools.register(
-            PdfToMarkdownTool(workspace=self.workspace, allowed_dir=allowed_dir)
+            PdfToMarkdownTool(
+                workspace=self.workspace,
+                allowed_dir=allowed_dir,
+                vlm_provider=self._get_autofigure_vlm(),
+                fal_api_key=self.fal_api_key,
+            )
         )
 
     def _register_autofigure_tools(self) -> None:

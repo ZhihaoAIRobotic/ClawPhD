@@ -1,3 +1,5 @@
+test.pdf
+examples/pdf2md_out/
 .assets
 .env
 *.pyc
@@ -27,3 +29,5 @@ arxiv-skills/
 autoresearch/
 AutoFigure-Edit/
 Edit-Banana/
+.claude/
+CLAUDE.md

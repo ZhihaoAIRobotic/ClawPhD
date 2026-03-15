@@ -11,6 +11,7 @@ An OpenClaw Agent for research that can turn academic papers into publication-re
 
 - [x] **Diagram Generation** — Create publication-quality academic illustrations and statistical plots from paper sections
 - [x] **Figure Reference Extraction** — Search influential papers and extract real figures as editable SVG + PPTX
+- [x] **PDF → Markdown + Editable Figures** — Convert any paper PDF to structured Markdown; export all labelled figures as PNG + SVG + drawio
 - [ ] **Paper Discovery** — Proactively search and summarize trending AI papers on a schedule
 - [ ] **Video Explainers** — Generate walkthrough videos from paper content
 - [x] **Paper Websites** — Turn papers into interactive web pages
@@ -58,6 +59,20 @@ The Agent searches influential papers and extracts all labelled figures into an 
 examples/figure_ref_command.sh
 ```
 ![Figure Reference Preview](examples/figure_ref_preview.png)
+
+### PDF to Markdown + Editable Figures
+
+Convert a local paper PDF into structured Markdown and export figure assets (PNG + SVG + drawio, with editable rebuild fallback):
+
+```bash
+examples/pdf2md_command.sh
+```
+
+Typical output folder:
+
+```text
+~/.clawphd/workspace/outputs/pdf2md/<pdf_stem>/
+```
 
 ## Quick Start
 

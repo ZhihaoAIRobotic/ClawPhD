@@ -11,11 +11,44 @@
 
 - [x] **图表生成** — 根据论文章节自动生成出版级学术插图与统计图表
 - [x] **参考图提取** — 从有影响力的论文中搜索并提取真实图表，导出为可编辑的 SVG + PPTX
+- [x] **PDF → Markdown + 可编辑图** — 将任意论文 PDF 转为结构化 Markdown；导出所有标注图为 PNG + SVG + drawio；通过 AutoFigure-Edit / Edit-Banana 尝试可编辑重建
 - [ ] **论文发现** — 主动搜索热门 AI 论文并定时汇总推送
 - [ ] **视频讲解** — 根据论文内容生成讲解视频
 - [x] **论文网站** — 将论文转化为交互式网页
 - [ ] **海报生成** — 根据论文生成学术会议海报
 - [ ] **代码生成** — 从论文方法论中提取并生成可复现代码
+
+## 示例
+
+### 图表生成
+
+```bash
+examples/diagram_generation_command.sh
+```
+
+### 论文网页生成
+
+```bash
+examples/page_generation_command.sh
+```
+
+### 参考图提取
+
+```bash
+examples/figure_ref_command.sh
+```
+
+### PDF 转 Markdown + 可编辑图
+
+```bash
+examples/pdf2md_command.sh
+```
+
+典型输出目录：
+
+```text
+~/.clawphd/workspace/outputs/pdf2md/<pdf_stem>/
+```
 
 ## 快速开始
 

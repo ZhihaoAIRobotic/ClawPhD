@@ -54,6 +54,7 @@ from clawphd.agent.tools.figureref import (
     ClassifyFiguresTool,
     ExportFigureReferenceTool,
 )
+from clawphd.agent.tools.pdf2md import PdfToMarkdownTool
 
 from clawphd.bus.events import InboundMessage, OutboundMessage
 from clawphd.bus.queue import MessageBus
@@ -250,6 +251,16 @@ class AgentLoop:
 
         # AutoFigure: image-to-drawio tools
         self._register_autofigure_tools()
+
+        # PDF → Markdown + figure export
+        self.tools.register(
+            PdfToMarkdownTool(
+                workspace=self.workspace,
+                allowed_dir=allowed_dir,
+                vlm_provider=self._get_autofigure_vlm(),
+                fal_api_key=self.fal_api_key,
+            )
+        )
 
     def _register_autofigure_tools(self) -> None:
         """Register AutoFigure image-to-drawio tools."""

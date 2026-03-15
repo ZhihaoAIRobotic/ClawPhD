@@ -132,64 +132,6 @@ clawphd agent -m "Hello!"
 clawphd agent
 ```
 
-## Optional Dependencies
-
-### PDF → Markdown (`pdf_to_markdown` tool)
-
-Core pip packages (install with `pip install "clawphd-ai[pdf2md]"` or individually):
-
-```bash
-pip install docling PyMuPDF Pillow
-```
-
-| Package | Purpose |
-|---|---|
-| `docling` | PDF → structured Markdown (default backend) |
-| `PyMuPDF` | Figure detection, PNG + SVG export via cropbox |
-| `Pillow` | PNG dimensions for drawio canvas sizing |
-
-Optional external CLI tools (provide higher-quality SVG or enable editable reconstruction):
-
-| Tool | Install | Purpose |
-|---|---|---|
-| `mutool` | [MuPDF](https://mupdf.com/releases/) → add to PATH | Best-quality vector SVG export per figure |
-| `pdf2svg` | `apt install pdf2svg` / [source](https://github.com/dawbarton/pdf2svg) | SVG export fallback |
-| `svgtodrawio` | `pip install svgtodrawio` or [source](https://github.com/mmunozba/svgtodrawio) | SVG → drawio conversion |
-
-**Editable reconstruction tools** (external research repos, not on PyPI):
-
-These tools produce a fully editable `rebuild/rebuilt.svg` for each figure.
-When neither is installed, a built-in two-layer SVG fallback is used instead.
-
-**AutoFigure-Edit** (priority 1):
-```bash
-git clone https://github.com/ResearAI/AutoFigure-Edit
-cd AutoFigure-Edit
-pip install -e .
-# then tell ClawPhD where the entry script is:
-export AUTOFIGURE_EDIT_CMD="python /path/to/AutoFigure-Edit/run.py"
-```
-
-**Edit-Banana** (priority 2):
-```bash
-git clone https://github.com/BIT-DataLab/Edit-Banana
-cd Edit-Banana
-pip install -e .
-export EDIT_BANANA_CMD="python /path/to/Edit-Banana/run.py"
-```
-
-Both env vars can also be set permanently in `~/.clawphd/config.json` or your shell profile.
-
-### Quick CLI test
-
-```bash
-# Smoke-test the pipeline against any local PDF (no rebuild tools required):
-python -m clawphd.agent.tools.pdf2md path/to/paper.pdf --no-rebuild
-
-# Full pipeline with rebuild fallback:
-python -m clawphd.agent.tools.pdf2md path/to/paper.pdf
-```
-
 ## CLI Reference
 
 | Command | Description |

@@ -48,6 +48,16 @@ Paths are platform-dependent (uses `appdirs`):
 - **Linux**: `~/.local/share/arxivterminal/papers.db`
 - **macOS**: `~/Library/Application Support/arxivterminal/papers.db`
 
+## Built-in agent tools (no local DB)
+
+For **programmatic** date-range + topic fetch, **scoring**, and **digests** inside ClawPhD, use the three tools documented in the **`paper-scout`** skill:
+
+- `arxiv_fetch_range` — Atom API, optional keyword OR-query + categories + `submittedDate` window  
+- `arxiv_rank_papers` — enhanced metadata heuristic + Semantic Scholar/OpenAlex enrichment + optional batch LLM refinement  
+- `arxiv_paper_digest` — introduction report for the selected papers using ranking rationale when available  
+
+Use **arxivterminal** when you need a **persistent SQLite corpus** (`arxiv fetch`, `arxiv_search.py`). Use **paper-scout tools** when you want a **one-shot pipeline** without populating the DB.
+
 ## Common Workflows
 
 ### Daily Research Workflow

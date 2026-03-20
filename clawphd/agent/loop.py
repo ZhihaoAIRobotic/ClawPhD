@@ -55,6 +55,11 @@ from clawphd.agent.tools.figureref import (
     ExportFigureReferenceTool,
 )
 from clawphd.agent.tools.pdf2md import PdfToMarkdownTool
+from clawphd.agent.tools.arxiv_pipeline import (
+    ArxivFetchRangeTool,
+    ArxivPaperDigestTool,
+    ArxivRankPapersTool,
+)
 
 from clawphd.bus.events import InboundMessage, OutboundMessage
 from clawphd.bus.queue import MessageBus
@@ -186,6 +191,19 @@ class AgentLoop:
 
     def _register_clawphd_tools(self, allowed_dir: Path | None) -> None:
         """Register ClawPhD-specific tools (diagram generation, page generation)."""
+        # Core research tools should remain available even if optional
+        # page/diagram tool groups fail to import.
+        self.tools.register(SearchInfluentialPapersTool(api_key=self.s2_api_key))
+        self.tools.register(ArxivFetchRangeTool())
+        self.tools.register(ArxivRankPapersTool(vlm_provider=self.vlm_provider))
+        self.tools.register(ArxivPaperDigestTool(vlm_provider=self.vlm_provider))
+        self.tools.register(
+            ExtractPaperFiguresTool(workspace=self.workspace, allowed_dir=allowed_dir)
+        )
+        self.tools.register(ExportFigureReferenceTool(workspace=self.workspace))
+        if self.vlm_provider:
+            self.tools.register(ClassifyFiguresTool(vlm_provider=self.vlm_provider))
+
         try:
             from clawphd.agent.tools.paperbanana import (
                 OptimizeInputTool,
@@ -202,52 +220,43 @@ class AgentLoop:
                 ExtractTableHTMLTool,
             )
         except ImportError:
-            return
-
-        if self.vlm_provider or self.image_gen_provider:
-            out = str(self.workspace / "outputs")
-            self.tools.register(OptimizeInputTool(vlm_provider=self.vlm_provider))
-            self.tools.register(
-                PlanDiagramTool(
-                    vlm_provider=self.vlm_provider,
-                    reference_store=self.reference_store,
+            pass
+        else:
+            if self.vlm_provider or self.image_gen_provider:
+                out = str(self.workspace / "outputs")
+                self.tools.register(OptimizeInputTool(vlm_provider=self.vlm_provider))
+                self.tools.register(
+                    PlanDiagramTool(
+                        vlm_provider=self.vlm_provider,
+                        reference_store=self.reference_store,
+                    )
                 )
-            )
-            self.tools.register(
-                SearchReferencesTool(
-                    vlm_provider=self.vlm_provider,
-                    reference_store=self.reference_store,
+                self.tools.register(
+                    SearchReferencesTool(
+                        vlm_provider=self.vlm_provider,
+                        reference_store=self.reference_store,
+                    )
                 )
-            )
-            self.tools.register(
-                GenerateImageTool(
-                    image_gen_provider=self.image_gen_provider,
-                    vlm_provider=self.vlm_provider,
-                    output_dir=out,
+                self.tools.register(
+                    GenerateImageTool(
+                        image_gen_provider=self.image_gen_provider,
+                        vlm_provider=self.vlm_provider,
+                        output_dir=out,
+                    )
                 )
-            )
-            self.tools.register(CritiqueImageTool(vlm_provider=self.vlm_provider))
+                self.tools.register(CritiqueImageTool(vlm_provider=self.vlm_provider))
 
-        self.tools.register(ParsePaperTool(workspace=self.workspace, allowed_dir=allowed_dir))
-        self.tools.register(RenderHTMLTool(workspace=self.workspace, allowed_dir=allowed_dir))
-        self.tools.register(MatchTemplateTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            self.tools.register(ParsePaperTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            self.tools.register(RenderHTMLTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            self.tools.register(MatchTemplateTool(workspace=self.workspace, allowed_dir=allowed_dir))
 
-        if self.vlm_provider:
-            self.tools.register(
-                ReviewHTMLVisualTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
-            )
-            self.tools.register(
-                ExtractTableHTMLTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
-            )
-
-        # Figure reference tools
-        self.tools.register(SearchInfluentialPapersTool(api_key=self.s2_api_key))
-        self.tools.register(
-            ExtractPaperFiguresTool(workspace=self.workspace, allowed_dir=allowed_dir)
-        )
-        self.tools.register(ExportFigureReferenceTool(workspace=self.workspace))
-        if self.vlm_provider:
-            self.tools.register(ClassifyFiguresTool(vlm_provider=self.vlm_provider))
+            if self.vlm_provider:
+                self.tools.register(
+                    ReviewHTMLVisualTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
+                )
+                self.tools.register(
+                    ExtractTableHTMLTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
+                )
 
         # AutoFigure: image-to-drawio tools
         self._register_autofigure_tools()

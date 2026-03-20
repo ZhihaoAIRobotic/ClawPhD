@@ -12,7 +12,7 @@ An OpenClaw Agent for research that can turn academic papers into publication-re
 - [x] **Diagram Generation** — Create publication-quality academic illustrations and statistical plots from paper sections
 - [x] **Figure Reference Extraction** — Search influential papers and extract real figures as editable SVG + PPTX
 - [x] **PDF → Markdown + Editable Figures** — Convert any paper PDF to structured Markdown; export all labelled figures as PNG + SVG + drawio
-- [ ] **Paper Discovery** — Proactively search and summarize trending AI papers on a schedule
+- [x] **Paper Discovery** — Proactively search and summarize trending AI papers on a schedule
 - [ ] **Video Explainers** — Generate walkthrough videos from paper content
 - [x] **Paper Websites** — Turn papers into interactive web pages
 - [ ] **Poster Generation** — Produce conference-ready posters from papers

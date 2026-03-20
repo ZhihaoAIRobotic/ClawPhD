@@ -63,18 +63,38 @@ class SubagentManager:
     def _register_clawphd_tools(self, tools: ToolRegistry, allowed_dir: Path | None) -> None:
         """Register ClawPhD-specific research and diagram tools for subagents."""
         try:
+            from clawphd.agent.tools.figureref import (
+                ClassifyFiguresTool,
+                ExportFigureReferenceTool,
+                ExtractPaperFiguresTool,
+                SearchInfluentialPapersTool,
+            )
+            from clawphd.agent.tools.arxiv_pipeline import (
+                ArxivFetchRangeTool,
+                ArxivPaperDigestTool,
+                ArxivRankPapersTool,
+            )
+        except ImportError:
+            return
+
+        tools.register(SearchInfluentialPapersTool(api_key=self.s2_api_key))
+        tools.register(ArxivFetchRangeTool())
+        tools.register(ArxivRankPapersTool(vlm_provider=self.vlm_provider))
+        tools.register(ArxivPaperDigestTool(vlm_provider=self.vlm_provider))
+        tools.register(
+            ExtractPaperFiguresTool(workspace=self.workspace, allowed_dir=allowed_dir)
+        )
+        tools.register(ExportFigureReferenceTool(workspace=self.workspace))
+        if self.vlm_provider:
+            tools.register(ClassifyFiguresTool(vlm_provider=self.vlm_provider))
+
+        try:
             from clawphd.agent.tools.autopage import (
                 ExtractTableHTMLTool,
                 MatchTemplateTool,
                 ParsePaperTool,
                 RenderHTMLTool,
                 ReviewHTMLVisualTool,
-            )
-            from clawphd.agent.tools.figureref import (
-                ClassifyFiguresTool,
-                ExportFigureReferenceTool,
-                ExtractPaperFiguresTool,
-                SearchInfluentialPapersTool,
             )
             from clawphd.agent.tools.paperbanana import (
                 CritiqueImageTool,
@@ -84,51 +104,43 @@ class SubagentManager:
                 SearchReferencesTool,
             )
         except ImportError:
-            return
-
-        if self.vlm_provider or self.image_gen_provider:
-            output_dir = str(self.workspace / "outputs")
-            tools.register(OptimizeInputTool(vlm_provider=self.vlm_provider))
-            tools.register(
-                PlanDiagramTool(
-                    vlm_provider=self.vlm_provider,
-                    reference_store=self.reference_store,
+            pass
+        else:
+            if self.vlm_provider or self.image_gen_provider:
+                output_dir = str(self.workspace / "outputs")
+                tools.register(OptimizeInputTool(vlm_provider=self.vlm_provider))
+                tools.register(
+                    PlanDiagramTool(
+                        vlm_provider=self.vlm_provider,
+                        reference_store=self.reference_store,
+                    )
                 )
-            )
-            tools.register(
-                SearchReferencesTool(
-                    vlm_provider=self.vlm_provider,
-                    reference_store=self.reference_store,
+                tools.register(
+                    SearchReferencesTool(
+                        vlm_provider=self.vlm_provider,
+                        reference_store=self.reference_store,
+                    )
                 )
-            )
-            tools.register(
-                GenerateImageTool(
-                    image_gen_provider=self.image_gen_provider,
-                    vlm_provider=self.vlm_provider,
-                    output_dir=output_dir,
+                tools.register(
+                    GenerateImageTool(
+                        image_gen_provider=self.image_gen_provider,
+                        vlm_provider=self.vlm_provider,
+                        output_dir=output_dir,
+                    )
                 )
-            )
-            tools.register(CritiqueImageTool(vlm_provider=self.vlm_provider))
+                tools.register(CritiqueImageTool(vlm_provider=self.vlm_provider))
 
-        tools.register(ParsePaperTool(workspace=self.workspace, allowed_dir=allowed_dir))
-        tools.register(RenderHTMLTool(workspace=self.workspace, allowed_dir=allowed_dir))
-        tools.register(MatchTemplateTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            tools.register(ParsePaperTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            tools.register(RenderHTMLTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            tools.register(MatchTemplateTool(workspace=self.workspace, allowed_dir=allowed_dir))
 
-        if self.vlm_provider:
-            tools.register(
-                ReviewHTMLVisualTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
-            )
-            tools.register(
-                ExtractTableHTMLTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
-            )
-
-        tools.register(SearchInfluentialPapersTool(api_key=self.s2_api_key))
-        tools.register(
-            ExtractPaperFiguresTool(workspace=self.workspace, allowed_dir=allowed_dir)
-        )
-        tools.register(ExportFigureReferenceTool(workspace=self.workspace))
-        if self.vlm_provider:
-            tools.register(ClassifyFiguresTool(vlm_provider=self.vlm_provider))
+            if self.vlm_provider:
+                tools.register(
+                    ReviewHTMLVisualTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
+                )
+                tools.register(
+                    ExtractTableHTMLTool(vlm_provider=self.vlm_provider, allowed_dir=allowed_dir)
+                )
 
         # AutoFigure: image-to-drawio tools
         try:

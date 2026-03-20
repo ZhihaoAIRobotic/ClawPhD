@@ -24,6 +24,7 @@ The skill format and metadata structure follow OpenClaw's conventions to maintai
 | `figure-ref` | Find and extract real figures from academic papers |
 | `github` | Interact with GitHub using the `gh` CLI |
 | `page-gen` | Generate academic paper project webpages from PDF |
+| `paper-scout` | arXiv date-range fetch, find high ranking paper, and digest (built-in tools) |
 | `skill-creator` | Create new skills |
 | `summarize` | Summarize URLs, files, and YouTube videos |
 | `tmux` | Remote-control tmux sessions |

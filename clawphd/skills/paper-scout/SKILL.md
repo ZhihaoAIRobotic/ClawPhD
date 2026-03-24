@@ -41,7 +41,7 @@ Built-in **tools** implement a three-step workflow inspired by **PaperFlow** (ar
 - **No `arxiv` Python package** is required; queries use the public **Atom API** via `httpx`.
 - **External ranking** uses **Semantic Scholar** first and **OpenAlex** as fallback. It works without a key, but if you have one you can pass `semantic_scholar_api_key` or set `SEMANTIC_SCHOLAR_API_KEY` / `S2_API_KEY`.
 - **LLM refinement** and **rich digest** need a configured multimodal/text provider (same stack as diagram tools — typically OpenRouter).
-- For **local cached papers** and interactive CLI workflows, still use the **`arxivterminal`** skill (`arxiv fetch`, `scripts/arxiv_search.py`).
+- For **local cached papers** and interactive CLI workflows, still use the **`arxivterminal`** skill (`arxiv fetch`, `scripts/arxiv_search.py`). All papers are stored under `paper_library/{subject}/{date}/` in the workspace root, where `{subject}` is a snake_case topic slug and `{date}` is `YYYY-MM-DD`.
 
 ## Example (conceptual)
 

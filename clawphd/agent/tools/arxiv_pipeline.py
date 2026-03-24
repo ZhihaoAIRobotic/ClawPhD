@@ -60,6 +60,8 @@ EVIDENCE_INDICATORS = [
 RETRYABLE_STATUS = {408, 409, 425, 429, 500, 502, 503, 504}
 HTTP_TIMEOUT = 30.0
 _BIB_CACHE: dict[str, dict[str, Any] | None] = {}
+_LAST_FETCH_RESULT: dict[str, Any] = {}
+_LAST_RANK_RESULT: dict[str, Any] = {}
 
 
 def _strip_html(text: str) -> str:
@@ -925,11 +927,30 @@ class ArxivFetchRangeTool(Tool):
             logger.exception("arxiv_fetch_range failed")
             return f"Error: arXiv fetch failed: {e}"
 
+        full_result = {
+            "count": len(papers),
+            "query_note": (
+                "Keywords are OR-matched in title/abstract when provided; "
+                "arXiv is always filtered by submittedDate range."
+            ),
+            "papers": papers,
+        }
+        _LAST_FETCH_RESULT.clear()
+        _LAST_FETCH_RESULT.update(full_result)
+
+        preview = [
+            {"arxiv_id": p["arxiv_id"], "title": p["title"], "published": p.get("published", "")}
+            for p in papers[:10]
+        ]
         return json.dumps(
             {
                 "count": len(papers),
-                "query_note": "Keywords are OR-matched in title/abstract when provided; arXiv is always filtered by submittedDate range.",
-                "papers": papers,
+                "cached": True,
+                "instruction": (
+                    "Full data cached. Call arxiv_rank_papers with "
+                    'papers_json="use_last_fetch" to rank these papers.'
+                ),
+                "preview_first_10": preview,
             },
             ensure_ascii=False,
             indent=2,
@@ -950,7 +971,12 @@ class ArxivRankPapersTool(Tool):
         "properties": {
             "papers_json": {
                 "type": "string",
-                "description": "JSON string: either full output of arxiv_fetch_range, or {\"papers\": [...]}, or a raw array of paper objects.",
+                "description": (
+                    "Pass the literal string \"use_last_fetch\" to reuse the most recent "
+                    "arxiv_fetch_range output (recommended — avoids copying large JSON). "
+                    "Alternatively: full JSON output of arxiv_fetch_range, {\"papers\": [...]}, "
+                    "or a raw array of paper objects."
+                ),
             },
             "interest_keywords": {
                 "type": "array",
@@ -1006,10 +1032,16 @@ class ArxivRankPapersTool(Tool):
         semantic_scholar_api_key: str | None = None,
         **kwargs: Any,
     ) -> str:
-        try:
-            data = json.loads(papers_json)
-        except json.JSONDecodeError as e:
-            return f"Error: papers_json is not valid JSON: {e}"
+        if papers_json.strip().lower() in ("use_last_fetch", '"use_last_fetch"', "last", "auto"):
+            if not _LAST_FETCH_RESULT:
+                return "Error: no cached fetch result. Run arxiv_fetch_range first."
+            data = _LAST_FETCH_RESULT
+            logger.info("arxiv_rank_papers: reusing cached fetch result ({} papers)", len(data.get("papers", [])))
+        else:
+            try:
+                data = json.loads(papers_json)
+            except json.JSONDecodeError as e:
+                return f"Error: papers_json is not valid JSON: {e}"
 
         if isinstance(data, dict) and "papers" in data:
             papers = data["papers"]
@@ -1095,12 +1127,33 @@ class ArxivRankPapersTool(Tool):
         ranked_papers.sort(key=lambda x: x.get("combined_score", x.get("meta_score", 0)), reverse=True)
         selected = ranked_papers[:top_n]
 
+        result = {
+            "top_n": top_n,
+            "use_external_ranking": use_external_ranking,
+            "use_llm_refinement": use_llm,
+            "selected": selected,
+        }
+        _LAST_RANK_RESULT.clear()
+        _LAST_RANK_RESULT.update(result)
+
+        summary = []
+        for p in selected:
+            summary.append({
+                "arxiv_id": p.get("arxiv_id", ""),
+                "title": p.get("title", ""),
+                "combined_score": p.get("combined_score"),
+                "llm_reason": p.get("llm_reason", ""),
+                "abs_url": p.get("abs_url", ""),
+            })
         return json.dumps(
             {
                 "top_n": top_n,
-                "use_external_ranking": use_external_ranking,
-                "use_llm_refinement": use_llm,
-                "selected": selected,
+                "cached": True,
+                "instruction": (
+                    "Full ranked data cached. Call arxiv_paper_digest with "
+                    'selected_papers_json="use_last_rank" to generate the digest.'
+                ),
+                "selected_summary": summary,
             },
             ensure_ascii=False,
             indent=2,
@@ -1121,7 +1174,11 @@ class ArxivPaperDigestTool(Tool):
         "properties": {
             "selected_papers_json": {
                 "type": "string",
-                "description": "JSON string: array of papers, or object with key 'selected'.",
+                "description": (
+                    "Pass the literal string \"use_last_rank\" to reuse the most recent "
+                    "arxiv_rank_papers output (recommended — avoids copying large JSON). "
+                    "Alternatively: JSON string array of papers, or object with key 'selected'."
+                ),
             },
             "language": {
                 "type": "string",
@@ -1147,10 +1204,16 @@ class ArxivPaperDigestTool(Tool):
         language: str = "zh",
         **kwargs: Any,
     ) -> str:
-        try:
-            data = json.loads(selected_papers_json)
-        except json.JSONDecodeError as e:
-            return f"Error: invalid JSON: {e}"
+        if selected_papers_json.strip().lower() in ("use_last_rank", '"use_last_rank"', "last", "auto"):
+            if not _LAST_RANK_RESULT:
+                return "Error: no cached rank result. Run arxiv_rank_papers first."
+            data = _LAST_RANK_RESULT
+            logger.info("arxiv_paper_digest: reusing cached rank result ({} papers)", len(data.get("selected", [])))
+        else:
+            try:
+                data = json.loads(selected_papers_json)
+            except json.JSONDecodeError as e:
+                return f"Error: invalid JSON: {e}"
 
         if isinstance(data, dict) and "selected" in data:
             papers = data["selected"]

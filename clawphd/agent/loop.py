@@ -83,7 +83,7 @@ class AgentLoop:
     5. Sends responses back
     """
 
-    _TOOL_RESULT_MAX_CHARS = 500
+    _TOOL_RESULT_MAX_CHARS = 80_000
 
     def __init__(
         self,

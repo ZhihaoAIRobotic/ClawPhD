@@ -90,11 +90,11 @@ Supported venues: NeurIPS · ICLR · ICML · EuroSys · OSDI · SOSP · CVPR · 
 | Paper | Real outcome | Originality | Significance | Contribution | Overall | Decision |
 |-------|-------------|-------------|--------------|--------------|---------|----------|
 | [Mamba](https://arxiv.org/abs/2312.00752) (arXiv:2312.00752) | Accepted (Spotlight) | **4 / 4** | **4 / 4** | **4 / 4** | **8 / 10** | **Accept** |
-| [SELF-RAG](https://arxiv.org/abs/2310.11511) (arXiv:2310.11511) | Rejected from ICLR | 3 / 4 | 3 / 4 | 3 / 4 | 7 / 10 | Accept |
+| [SELF-RAG](https://arxiv.org/abs/2310.11511) (arXiv:2310.11511) | Rejected from ICLR ¹ | 3 / 4 | 3 / 4 | 3 / 4 | 7 / 10 | Accept |
+
+> ¹ **Note on SELF-RAG:** This is a high-quality paper — it was accepted at EMNLP 2023 and has thousands of citations. Its ICLR 2024 rejection was due to a venue policy (already published elsewhere), **not** a reflection of paper quality. Our system correctly evaluates it as solid, well-executed research (7/10), just not at the same level of architectural breakthrough as Mamba (8/10, with three dimensions at 4/4).
 
 The accepted paper (Mamba) scores higher on every breakthrough dimension. All three dimensions where Mamba achieves 4/4 — Originality, Significance, Contribution — are the strongest predictors of lasting architectural influence. SELF-RAG scores a uniform 3/4, reflecting solid incremental work. Full review texts: [Mamba](examples/reviews/mamba_iclr2024_accepted.md) · [SELF-RAG](examples/reviews/selfrag_iclr2024_rejected.md).
-
-> SELF-RAG was rejected from ICLR 2024 because it had already been accepted at EMNLP 2023, not for quality reasons. Our system evaluates intrinsic paper quality and correctly ranks Mamba above SELF-RAG across all key dimensions.
 
 Output folder:
 

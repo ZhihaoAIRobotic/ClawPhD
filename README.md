@@ -33,11 +33,7 @@ The following images demonstrate the Agent's iterative refinement process for ge
 First Generation (Initial Output):
 ![Initial Generation](examples/humanllm_framework_skill_based.png)
 
-After Multiple Self-feedback Iterations:
-
-1 iteration:
-![Iteration v1](examples/humanllm_framework_skillflow_v1.png)
-3 iterations:
+After 3 iterations:
 ![Iteration v3](examples/humanllm_framework_skillflow_v3.png)
 
 These examples showcase how the Agent progressively improves diagram quality through human-in-the-loop feedback, resulting in more polished and publication-ready outputs.
@@ -49,7 +45,7 @@ The Agent can turn academic papers into interactive web pages:
 ```bash
 examples/page_generation_command.sh
 ```
-![Paper Website Example](examples/screenshot_v2.png)
+![Paper Website Example](examples/screenshot_v2_cut.png)
 
 ### Figure Reference Extraction
 
@@ -58,7 +54,7 @@ The Agent searches influential papers and extracts all labelled figures into an 
 ```bash
 examples/figure_ref_command.sh
 ```
-![Figure Reference Preview](examples/figure_ref_preview.png)
+![Figure Reference Preview](examples/figure_ref_preview_cut.png)
 
 ### PDF to Markdown + Editable Figures
 

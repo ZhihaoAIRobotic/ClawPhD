@@ -55,6 +55,7 @@ from clawphd.agent.tools.figureref import (
     ExportFigureReferenceTool,
 )
 from clawphd.agent.tools.pdf2md import PdfToMarkdownTool
+from clawphd.agent.tools.paper_review import PaperReviewTool
 from clawphd.agent.tools.arxiv_pipeline import (
     ArxivFetchRangeTool,
     ArxivPaperDigestTool,
@@ -260,6 +261,15 @@ class AgentLoop:
 
         # AutoFigure: image-to-drawio tools
         self._register_autofigure_tools()
+
+        # AI paper review
+        if self.vlm_provider:
+            self.tools.register(
+                PaperReviewTool(
+                    workspace=self.workspace,
+                    vlm_provider=self.vlm_provider,
+                )
+            )
 
         # PDF → Markdown + figure export
         self.tools.register(

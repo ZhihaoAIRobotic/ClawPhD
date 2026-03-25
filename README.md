@@ -12,6 +12,7 @@ An OpenClaw Agent for research that can turn academic papers into publication-re
 - [x] **Diagram Generation** — Create publication-quality academic illustrations and statistical plots from paper sections
 - [x] **Figure Reference Extraction** — Search influential papers and extract real figures as editable SVG + PPTX
 - [x] **PDF → Markdown + Editable Figures** — Convert any paper PDF to structured Markdown; export all labelled figures as PNG + SVG + drawio
+- [x] **AI Paper Review** — Peer-review any PDF against NeurIPS / ICLR / ICML / EuroSys / CVPR rubrics; produces narrative feedback + dimensional scores + Accept/Reject
 - [x] **Paper Discovery** — Proactively search and summarize trending AI papers on a schedule
 - [ ] **Video Explainers** — Generate walkthrough videos from paper content
 - [x] **Paper Websites** — Turn papers into interactive web pages
@@ -64,6 +65,35 @@ Typical output folder:
 
 ```text
 ~/.clawphd/workspace/outputs/pdf2md/<pdf_stem>/
+```
+
+### AI Paper Review
+
+Review any paper PDF against real conference rubrics — produces a structured narrative review (Synopsis, Strengths, Weaknesses, Suggestions, References) plus venue-specific dimensional scores and an Accept/Reject recommendation:
+
+```bash
+examples/ai_review_command.sh
+```
+
+Supported venues: NeurIPS · ICLR · ICML · EuroSys · OSDI · SOSP · CVPR · ICCV · General
+
+**Accuracy check — ICLR 2024 papers:**
+
+| Paper | Real outcome | Originality | Significance | Contribution | Overall | Decision |
+|-------|-------------|-------------|--------------|--------------|---------|----------|
+| [Mamba](https://arxiv.org/abs/2312.00752) (arXiv:2312.00752) | Accepted (Spotlight) | **4 / 4** | **4 / 4** | **4 / 4** | **8 / 10** | **Accept** |
+| [SELF-RAG](https://arxiv.org/abs/2310.11511) (arXiv:2310.11511) | Rejected from ICLR ¹ | 3 / 4 | 3 / 4 | 3 / 4 | 7 / 10 | Accept |
+
+> ¹ **Note on SELF-RAG:** This is a high-quality paper — it was accepted at EMNLP 2023 and has thousands of citations. Its ICLR 2024 rejection was due to a venue policy (already published elsewhere), **not** a reflection of paper quality. Our system correctly evaluates it as solid, well-executed research (7/10), just not at the same level of architectural breakthrough as Mamba (8/10, with three dimensions at 4/4).
+
+The accepted paper (Mamba) scores higher on every breakthrough dimension. All three dimensions where Mamba achieves 4/4 — Originality, Significance, Contribution — are the strongest predictors of lasting architectural influence. SELF-RAG scores a uniform 3/4, reflecting solid incremental work. Full review texts: [Mamba](examples/reviews/mamba_iclr2024_accepted.md) · [SELF-RAG](examples/reviews/selfrag_iclr2024_rejected.md).
+
+Output folder:
+
+```text
+~/.clawphd/workspace/outputs/paper_review/<pdf_stem>/
+├── review.md    # 6-section narrative + score table
+└── meta.json    # venue, mode, scores, elapsed time
 ```
 
 ## Quick Start
